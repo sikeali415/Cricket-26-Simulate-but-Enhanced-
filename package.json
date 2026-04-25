@@ -1,0 +1,45 @@
+{
+  "name": "sikes-cricket-manager-25",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "eslint . --max-warnings 0",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@google/genai": "^1.46.0",
+    "@hello-pangea/dnd": "^18.0.1",
+    "@tailwindcss/vite": "^4.0.0-beta.10",
+    "clsx": "^2.1.1",
+    "firebase": "^12.11.0",
+    "framer-motion": "^12.38.0",
+    "lucide-react": "^0.577.0",
+    "motion": "^12.38.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "recharts": "^3.8.0",
+    "tailwind-merge": "^3.5.0",
+    "tailwindcss": "^4.0.0-beta.10",
+    "workbox-window": "^7.4.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@typescript-eslint/eslint-plugin": "^8.58.0",
+    "@typescript-eslint/parser": "^8.58.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.4.0",
+    "typescript": "~5.8.2",
+    "typescript-eslint": "^8.58.0",
+    "vite": "^6.2.0",
+    "vite-plugin-pwa": "^1.2.0"
+  }
+}
