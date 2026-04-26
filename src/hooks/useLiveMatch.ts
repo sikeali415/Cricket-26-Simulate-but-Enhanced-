@@ -280,9 +280,9 @@ export const useLiveMatch = (
             const pitchMods = PITCH_MODIFIERS[groundPitch as keyof typeof PITCH_MODIFIERS] || PITCH_MODIFIERS["Balanced Sporting Pitch"];
             const formatMods = pitchMods[gameData.currentFormat] || pitchMods[Format.T20];
             
-            let strikerIdx = currentInning.batting.findIndex(b => b.playerId === currentBatters.strikerId);
-            let nonStrikerIdx = currentInning.batting.findIndex(b => b.playerId === currentBatters.nonStrikerId);
-            let bowlerIdx = currentInning.bowling.findIndex(b => b.playerId === currentBowlerId);
+            const strikerIdx = currentInning.batting.findIndex(b => b.playerId === currentBatters.strikerId);
+            const nonStrikerIdx = currentInning.batting.findIndex(b => b.playerId === currentBatters.nonStrikerId);
+            const bowlerIdx = currentInning.bowling.findIndex(b => b.playerId === currentBowlerId);
 
             // Ensure indices are valid
             if (strikerIdx === -1 || bowlerIdx === -1) {

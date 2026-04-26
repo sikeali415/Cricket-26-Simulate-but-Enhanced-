@@ -5,7 +5,7 @@ import { Home, Trophy, BarChart3, Settings as SettingsIcon, Newspaper, Users, Da
 import { GameData, CareerScreen, MatchResult, Player, Format, PromotionRecord, Team, LiveMatchState, NewsArticle, Ground, Standing, Match } from '../types';
 import { TEAMS, INITIAL_SPONSORSHIPS, INITIAL_NEWS } from '../data';
 import { Icons } from './Icons';
-import { getPlayerById, generateLeagueSchedule, negotiateSponsorships, generateMatchNews, generatePreMatchNews, simulateInjuries, updateAISquads, generateReplacementPlayer } from '../utils';
+import { getPlayerById, generateLeagueSchedule, negotiateSponsorships, generateMatchNews, generatePreMatchNews, simulateInjuries, updateAISquads, generateReplacementPlayer, resolveMatch } from '../utils';
 import { useSimulation } from '../hooks/useSimulation';
 import { db } from '../firebase';
 import { doc, setDoc } from 'firebase/firestore';
@@ -82,6 +82,8 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
     const [playerProfileFormat, setPlayerProfileFormat] = useState<Format>(gameData.currentFormat);
     const [selectedMatchResult, setSelectedMatchResult] = useState<MatchResult | null>(null);
     const [forwardSimResults, setForwardSimResults] = useState<MatchResult[]>([]);
+
+    const [isAutoSimulating, setIsAutoSimulating] = useState(false);
 
     const { runSimulationForCurrentFormat, updateStatsFromMatch } = useSimulation(gameData, setGameData);
 
@@ -273,7 +275,8 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
     const simulateBackgroundMatches = (currentData: GameData): GameData => {
         if (!currentData || !currentData.schedule || !currentData.currentMatchIndex) return currentData;
         let updatedData = JSON.parse(JSON.stringify(currentData)) as GameData;
-        Object.values(Format).forEach(f => {
+        const formats = Object.values(Format);
+        formats.forEach(f => {
             if (f === updatedData.currentFormat) return; 
 
             const schedule = updatedData.schedule[f];
@@ -282,24 +285,8 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
             
             for (let i = 0; i < 8; i++) {
                 if (mIdx < schedule.length) {
-                const match = JSON.parse(JSON.stringify(schedule[mIdx]));
-                    
-                    if (match.group !== 'Round-Robin') {
-                        const standings = updatedData.standings?.[f] || [];
-                        const getTeamName = (pos: number) => standings[pos - 1]?.teamName;
-                        const resolvePlaceholder = (placeholder: string) => {
-                            if (['1st', '2nd', '3rd', '4th'].includes(placeholder)) return getTeamName(parseInt(placeholder[0]));
-                            if (placeholder.startsWith('SF')) {
-                                const sfMatchNumber = placeholder.split(' ')[0];
-                                const sfRes = updatedData.matchResults?.[f]?.find(r => r && r.matchNumber === sfMatchNumber);
-                                return updatedData.teams?.find(t => t.id === sfRes?.winnerId)?.name || 'TBD';
-                            }
-                            return placeholder;
-                        };
-                        match.teamA = resolvePlaceholder(match.teamA) || 'TBD';
-                        match.teamB = resolvePlaceholder(match.teamB) || 'TBD';
-                        if (match.teamA === 'TBD' || match.teamB === 'TBD') break;
-                    }
+                    const match = resolveMatch(schedule[mIdx], updatedData, f);
+                    if (match.teamA === 'TBD' || match.teamB === 'TBD' || match.teamA.includes('st') || match.teamA.includes('nd') || match.teamA.includes('SF')) break;
 
                     const result = runSimulationForCurrentFormat(match, updatedData);
                     updatedData = updateStatsFromMatch(result, f, updatedData);
@@ -323,7 +310,7 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
 
         for(let i=0; i<5; i++) {
             if (matchIndex + i < schedule.length) {
-                const m = schedule[matchIndex+i];
+                const m = resolveMatch(schedule[matchIndex+i], currentData, currentData.currentFormat);
                 if (m.teamA === userTeam.name || m.teamB === userTeam.name) {
                     const preNews = generatePreMatchNews(m, currentData);
                     newNewsItems.push(preNews);
@@ -336,29 +323,9 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
         const maxSimulations = 8;
 
         while (matchIndex < schedule.length && simulatedCount < maxSimulations) {
-            const matchToSim = JSON.parse(JSON.stringify(schedule[matchIndex]));
+            const matchToSim = resolveMatch(schedule[matchIndex], currentData, currentData.currentFormat);
             
-            if (matchToSim.group !== 'Round-Robin') {
-                const standings = currentData.standings?.[currentData.currentFormat] || [];
-                const getTeamName = (pos: number) => standings[pos - 1]?.teamName;
-                const resolvePlaceholder = (placeholder: string) => {
-                    if (['1st', '2nd', '3rd', '4th'].includes(placeholder)) {
-                        const pos = parseInt(placeholder[0]);
-                        return getTeamName(pos);
-                    }
-                    if (placeholder.startsWith('SF')) {
-                        const sfMatchNumber = placeholder.split(' ')[0];
-                        const sfResult = currentData.matchResults?.[currentData.currentFormat]?.find(r => r && r.matchNumber === sfMatchNumber);
-                        const winner = currentData.teams?.find(t => t.id === sfResult?.winnerId);
-                        return winner?.name || null;
-                    }
-                    return placeholder;
-                };
-                matchToSim.teamA = resolvePlaceholder(matchToSim.teamA) || 'TBD';
-                matchToSim.teamB = resolvePlaceholder(matchToSim.teamB) || 'TBD';
-                
-                if (matchToSim.teamA === 'TBD' || matchToSim.teamB === 'TBD') break; 
-            }
+            if (matchToSim.teamA === 'TBD' || matchToSim.teamB === 'TBD' || matchToSim.teamA.includes('st') || matchToSim.teamA.includes('nd') || matchToSim.teamA.includes('SF')) break;
 
             const isUserTeamMatch = matchToSim.teamA === userTeam.name || matchToSim.teamB === userTeam.name;
             if (isUserTeamMatch) break;
@@ -403,71 +370,59 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
         }
     };
 
+    const runOneAutoSim = useCallback(() => {
+        setGameData(prev => {
+            if (!prev || !userTeam) return prev;
+            const currentFormat = prev.currentFormat;
+            const schedule = prev.schedule[currentFormat];
+            const currentIndex = prev.currentMatchIndex[currentFormat];
+            
+            if (currentIndex >= schedule.length) {
+                setIsAutoSimulating(false);
+                return prev;
+            }
+
+            const match = resolveMatch(schedule[currentIndex], prev, currentFormat);
+            const isUserTeamMatch = match.teamA === userTeam.name || match.teamB === userTeam.name;
+
+            if (isUserTeamMatch) {
+                setIsAutoSimulating(false);
+                return prev;
+            }
+
+            if (match.teamA === 'TBD' || match.teamB === 'TBD' || match.teamA.includes('st') || match.teamA.includes('nd') || match.teamA.includes('SF')) {
+                setIsAutoSimulating(false);
+                return prev;
+            }
+
+            const result = runSimulationForCurrentFormat(match, prev);
+            let updatedData = updateStatsFromMatch(result, currentFormat, prev);
+            updatedData = simulateInjuries(updatedData, result);
+            updatedData = updateAISquads(updatedData);
+            updatedData.currentMatchIndex[currentFormat]++;
+
+            const sponsorship = updatedData.sponsorships?.[currentFormat] || INITIAL_SPONSORSHIPS[currentFormat];
+            const newsItem = generateMatchNews(result, currentFormat, sponsorship);
+            updatedData.news = [newsItem, ...(updatedData.news || [])].slice(0, 50);
+            
+            return updatedData;
+        });
+    }, [userTeam, runSimulationForCurrentFormat, updateStatsFromMatch, setGameData]);
+
+    useEffect(() => {
+        let timer: any;
+        if (isAutoSimulating) {
+            timer = setInterval(() => {
+                runOneAutoSim();
+            }, 800); // 800ms delay between matches for "slow simulation"
+        }
+        return () => clearInterval(timer);
+    }, [isAutoSimulating, runOneAutoSim]);
+
     const handleSkipToMyMatch = () => {
         if (!userTeam) return;
-        let currentData = { ...gameData };
-        let matchIndex = currentData.currentMatchIndex[currentData.currentFormat];
-        const schedule = currentData.schedule[currentData.currentFormat] || [];
-        const results: MatchResult[] = [];
-        const newNewsItems: NewsArticle[] = [];
-
-        currentData = simulateBackgroundMatches(currentData);
-
-        let simulatedCount = 0;
-        const maxSimulations = 50; 
-
-        while (matchIndex < schedule.length && simulatedCount < maxSimulations) {
-            const matchToSim = JSON.parse(JSON.stringify(schedule[matchIndex]));
-            
-            if (matchToSim.group !== 'Round-Robin') {
-                const standings = currentData.standings?.[currentData.currentFormat] || [];
-                const getTeamName = (pos: number) => standings[pos - 1]?.teamName;
-                const resolvePlaceholder = (placeholder: string) => {
-                    if (['1st', '2nd', '3rd', '4th'].includes(placeholder)) return getTeamName(parseInt(placeholder[0]));
-                    if (placeholder.startsWith('SF')) {
-                        const sfMatchNumber = placeholder.split(' ')[0];
-                        const sfResult = currentData.matchResults?.[currentData.currentFormat]?.find(r => r && r.matchNumber === sfMatchNumber);
-                        return currentData.teams?.find(t => t.id === sfResult?.winnerId)?.name || null;
-                    }
-                    return placeholder;
-                };
-                matchToSim.teamA = resolvePlaceholder(matchToSim.teamA) || 'TBD';
-                matchToSim.teamB = resolvePlaceholder(matchToSim.teamB) || 'TBD';
-                if (matchToSim.teamA === 'TBD' || matchToSim.teamB === 'TBD') break; 
-            }
-
-            const isUserTeamMatch = matchToSim.teamA === userTeam.name || matchToSim.teamB === userTeam.name;
-            if (isUserTeamMatch) break; 
-
-            const result = runSimulationForCurrentFormat(matchToSim, currentData);
-            currentData = updateStatsFromMatch(result, currentData.currentFormat, currentData);
-            currentData = simulateInjuries(currentData, result);
-            currentData = updateAISquads(currentData);
-
-            if (currentData.currentMatchIndex && currentData.currentMatchIndex[currentData.currentFormat] !== undefined) {
-                currentData.currentMatchIndex[currentData.currentFormat]++; 
-            }
-            results.push(result);
-            simulatedCount++;
-            
-            // Occasionally add news
-            if (matchToSim.group !== 'Round-Robin' || Math.random() < 0.1) {
-                const sponsorship = currentData.sponsorships?.[currentData.currentFormat] || INITIAL_SPONSORSHIPS[currentData.currentFormat];
-                newNewsItems.push(generateMatchNews(result, currentData.currentFormat, sponsorship));
-            }
-            
-            matchIndex++;
-        }
-
-        if (newNewsItems.length > 0) currentData.news = [...newNewsItems, ...(currentData.news || [])].slice(0, 50);
-
-        if (results.length > 0) {
-            setForwardSimResults(results);
-            setGameData(currentData); 
-            setScreen('FORWARD_RESULTS');
-        } else {
-             showFeedback("You are already at your next match!", "success");
-        }
+        setIsAutoSimulating(true);
+        showFeedback("Auto-Simulating to your match...", "success");
     };
 
     const handlePlayMatch = () => {
@@ -477,25 +432,9 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
         const currentMatchIndex = gameData.currentMatchIndex[gameData.currentFormat];
         if (schedule === undefined || currentMatchIndex === undefined || currentMatchIndex >= schedule.length) return;
 
-        const matchToSim = JSON.parse(JSON.stringify(schedule[currentMatchIndex]));
+        const matchToSim = resolveMatch(schedule[currentMatchIndex], gameData, gameData.currentFormat);
 
-        if (matchToSim.group !== 'Round-Robin') {
-             const standings = gameData.standings?.[gameData.currentFormat] || [];
-             const getTeamName = (pos: number) => standings[pos - 1]?.teamName;
-             const resolvePlaceholder = (placeholder: string) => {
-                if (['1st', '2nd', '3rd', '4th'].includes(placeholder)) return getTeamName(parseInt(placeholder[0]));
-                if (placeholder.startsWith('SF')) {
-                    const sfMatchNumber = placeholder.split(' ')[0];
-                    const sfResult = gameData.matchResults?.[gameData.currentFormat]?.find(r => r && r.matchNumber === sfMatchNumber);
-                    return gameData.teams?.find(t => t.id === sfResult?.winnerId)?.name || null;
-                }
-                return placeholder;
-            };
-            matchToSim.teamA = resolvePlaceholder(matchToSim.teamA) || 'TBD';
-            matchToSim.teamB = resolvePlaceholder(matchToSim.teamB) || 'TBD';
-        }
-
-        if (matchToSim.teamA === 'TBD' || matchToSim.teamB === 'TBD') {
+        if (matchToSim.teamA === 'TBD' || matchToSim.teamB === 'TBD' || matchToSim.teamA.includes('st') || matchToSim.teamB.includes('SF')) {
             showFeedback("Waiting for league stage to conclude.", "error");
             return;
         }
@@ -536,25 +475,9 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
         const currentMatchIndex = gameData.currentMatchIndex[gameData.currentFormat];
         if (schedule === undefined || currentMatchIndex === undefined || currentMatchIndex >= schedule.length) return;
 
-        const matchToSim = JSON.parse(JSON.stringify(schedule[currentMatchIndex]));
+        const matchToSim = resolveMatch(schedule[currentMatchIndex], gameData, gameData.currentFormat);
 
-        if (matchToSim.group !== 'Round-Robin') {
-             const standings = gameData.standings?.[gameData.currentFormat] || [];
-             const getTeamName = (pos: number) => standings[pos - 1]?.teamName;
-             const resolvePlaceholder = (placeholder: string) => {
-                if (['1st', '2nd', '3rd', '4th'].includes(placeholder)) return getTeamName(parseInt(placeholder[0]));
-                if (placeholder.startsWith('SF')) {
-                    const sfMatchNumber = placeholder.split(' ')[0];
-                    const sfResult = gameData.matchResults?.[gameData.currentFormat]?.find(r => r && r.matchNumber === sfMatchNumber);
-                    return gameData.teams?.find(t => t.id === sfResult?.winnerId)?.name || null;
-                }
-                return placeholder;
-            };
-            matchToSim.teamA = resolvePlaceholder(matchToSim.teamA) || 'TBD';
-            matchToSim.teamB = resolvePlaceholder(matchToSim.teamB) || 'TBD';
-        }
-
-        if (matchToSim.teamA === 'TBD' || matchToSim.teamB === 'TBD') {
+        if (matchToSim.teamA === 'TBD' || matchToSim.teamB === 'TBD' || matchToSim.teamA.includes('st') || matchToSim.teamB.includes('SF')) {
             showFeedback("Waiting for league stage to conclude.", "error");
             return;
         }
@@ -579,25 +502,9 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
         const currentMatchIndex = gameData.currentMatchIndex[gameData.currentFormat];
         if (schedule === undefined || currentMatchIndex === undefined || currentMatchIndex >= schedule.length) return;
 
-        const matchToSim = JSON.parse(JSON.stringify(schedule[currentMatchIndex]));
+        const matchToSim = resolveMatch(schedule[currentMatchIndex], gameData, gameData.currentFormat);
 
-        if (matchToSim.group !== 'Round-Robin') {
-             const standings = gameData.standings?.[gameData.currentFormat] || [];
-             const getTeamName = (pos: number) => standings[pos - 1]?.teamName;
-             const resolvePlaceholder = (placeholder: string) => {
-                if (['1st', '2nd', '3rd', '4th'].includes(placeholder)) return getTeamName(parseInt(placeholder[0]));
-                if (placeholder.startsWith('SF')) {
-                    const sfMatchNumber = placeholder.split(' ')[0];
-                    const sfResult = gameData.matchResults?.[gameData.currentFormat]?.find(r => r && r.matchNumber === sfMatchNumber);
-                    return gameData.teams?.find(t => t.id === sfResult?.winnerId)?.name || null;
-                }
-                return placeholder;
-            };
-            matchToSim.teamA = resolvePlaceholder(matchToSim.teamA) || 'TBD';
-            matchToSim.teamB = resolvePlaceholder(matchToSim.teamB) || 'TBD';
-        }
-
-        if (matchToSim.teamA === 'TBD' || matchToSim.teamB === 'TBD') {
+        if (matchToSim.teamA === 'TBD' || matchToSim.teamB === 'TBD' || matchToSim.teamA.includes('st') || matchToSim.teamB.includes('SF')) {
             showFeedback("Waiting for league stage to conclude.", "error");
             return;
         }

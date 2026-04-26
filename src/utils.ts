@@ -341,31 +341,48 @@ export const resolveMatch = (match: Match, gameData: GameData, format: Format): 
     if (!match) return match;
     const resolved = { ...match };
     const standings = gameData.standings[format] || [];
+    const teams = gameData.teams || [];
 
     const getTeamFromStanding = (rank: number, group: string) => {
+        const groupKey = group.replace('Group ', '');
         const filtered = standings.filter(s => {
-            const teamData = gameData.allTeamsData.find(t => t.id === s.teamId);
-            if (!teamData) return false;
-            // Simplified group logic
-            const allTeams = gameData.allTeamsData;
-            const teamIdx = allTeams.findIndex(t => t.id === s.teamId);
-            const groupKey = teamIdx < allTeams.length / 2 ? 'Group A' : 'Group B';
-            return groupKey === group;
+            const team = teams.find(t => t.id === s.teamId);
+            return team?.group === groupKey;
         });
         return filtered[rank - 1]?.teamName || 'TBD';
     };
 
-    if (typeof resolved.teamA === 'string') {
-        if (resolved.teamA.includes('1st A')) resolved.teamA = getTeamFromStanding(1, 'Group A');
-        else if (resolved.teamA.includes('1st B')) resolved.teamA = getTeamFromStanding(1, 'Group B');
-        else if (resolved.teamA.includes('SF1 Winner')) resolved.teamA = 'SF1 Winner'; // Basic
-    }
-    
-    if (typeof resolved.teamB === 'string') {
-        if (resolved.teamB.includes('2nd A')) resolved.teamB = getTeamFromStanding(2, 'Group A');
-        else if (resolved.teamB.includes('2nd B')) resolved.teamB = getTeamFromStanding(2, 'Group B');
-        else if (resolved.teamB.includes('SF2 Winner')) resolved.teamB = 'SF2 Winner';
-    }
+    const resolvePlaceholder = (placeholder: any): string => {
+        if (typeof placeholder !== 'string') return placeholder;
+        
+        if (placeholder === '1st A') return getTeamFromStanding(1, 'Group A');
+        if (placeholder === '2nd A') return getTeamFromStanding(2, 'Group A');
+        if (placeholder === '3rd A') return getTeamFromStanding(3, 'Group A');
+        if (placeholder === '4th A') return getTeamFromStanding(4, 'Group A');
+        
+        if (placeholder === '1st B') return getTeamFromStanding(1, 'Group B');
+        if (placeholder === '2nd B') return getTeamFromStanding(2, 'Group B');
+        if (placeholder === '3rd B') return getTeamFromStanding(3, 'Group B');
+        if (placeholder === '4th B') return getTeamFromStanding(4, 'Group B');
+
+        if (placeholder === 'SF1 Winner') {
+            const sf1Res = gameData.matchResults[format]?.find(r => r && r.matchNumber === 'SF1');
+            return teams.find(t => t.id === sf1Res?.winnerId)?.name || 'SF1 Winner';
+        }
+        if (placeholder === 'SF2 Winner') {
+            const sf2Res = gameData.matchResults[format]?.find(r => r && r.matchNumber === 'SF2');
+            return teams.find(t => t.id === sf2Res?.winnerId)?.name || 'SF2 Winner';
+        }
+
+        // Generic placeholders
+        if (placeholder.includes('1st')) return getTeamFromStanding(1, placeholder.includes('B') ? 'Group B' : 'Group A');
+        if (placeholder.includes('2nd')) return getTeamFromStanding(2, placeholder.includes('B') ? 'Group B' : 'Group A');
+
+        return placeholder;
+    };
+
+    resolved.teamA = resolvePlaceholder(resolved.teamA);
+    resolved.teamB = resolvePlaceholder(resolved.teamB);
 
     return resolved;
 };
