@@ -157,6 +157,51 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
         }
     }, [gameData, setGameData]);
 
+    const updateAISquadsInData = (data: GameData) => {
+        return updateAISquads(data);
+    };
+
+    const checkT20SmashTransitions = useCallback((data: GameData): GameData => {
+        if (data.currentFormat !== Format.T20_SMASH) return data;
+        const schedule = data.schedule[Format.T20_SMASH];
+        const currentIndex = data.currentMatchIndex[Format.T20_SMASH];
+        if (!schedule) return data;
+
+        // Transition 1: Group Stage (56 matches) -> Super Six
+        if (currentIndex === 56) {
+            const hasStartedSuperSix = data.teams.some(t => t.group === 'Super Six');
+            if (!hasStartedSuperSix) {
+                const standings = data.standings[Format.T20_SMASH] || [];
+                const sortedStandings = [...standings].sort((a, b) => {
+                    if (b.points !== a.points) return b.points - a.points;
+                    if (b.netRunRate !== a.netRunRate) return b.netRunRate - a.netRunRate;
+                    return b.won - a.won;
+                });
+
+                const topA = sortedStandings.filter(s => data.teams.find(t => t.id === s.teamId)?.group === 'A').slice(0, 3);
+                const topB = sortedStandings.filter(s => data.teams.find(t => t.id === s.teamId)?.group === 'B').slice(0, 3);
+                const superSixIds = new Set([...topA, ...topB].map(s => s.teamId));
+
+                const newTeams = data.teams.map(t => ({
+                    ...t,
+                    group: superSixIds.has(t.id) ? 'Super Six' as any : 'Eliminated' as any
+                }));
+
+                const seasonNews: NewsArticle = {
+                    id: `super-six-start-${data.currentSeason}`,
+                    headline: "Super Six Stage Commences!",
+                    date: new Date().toLocaleDateString(),
+                    excerpt: "The top teams have advanced.",
+                    content: `The group stages are over. Group A qualifiers: ${topA.map(s => s.teamName).join(', ')}. Group B qualifiers: ${topB.map(s => s.teamName).join(', ')}. They now enter the Super Six battle!`,
+                    type: 'league'
+                };
+
+                return { ...data, teams: newTeams, news: [seasonNews, ...(data.news || [])].slice(0, 50) };
+            }
+        }
+        return data;
+    }, []);
+
     const handleUpdatePlayer = async (updatedPlayer: Player) => {
         setGameData(prevData => {
             if (!prevData) return null;
@@ -291,6 +336,7 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
                     const result = runSimulationForCurrentFormat(match, updatedData);
                     updatedData = updateStatsFromMatch(result, f, updatedData);
                     updatedData.currentMatchIndex[f]++;
+                    updatedData = checkT20SmashTransitions(updatedData);
                     mIdx++;
                 }
             }
@@ -298,7 +344,7 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
         return updatedData;
     };
 
-    const handleForwardDay = () => {
+    const handleForwardDay = useCallback(() => {
         if (!userTeam) return;
         let currentData = { ...gameData };
         let matchIndex = currentData.currentMatchIndex[currentData.currentFormat];
@@ -340,6 +386,7 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
 
             if (currentData.currentMatchIndex && currentData.currentMatchIndex[currentData.currentFormat] !== undefined) {
                 currentData.currentMatchIndex[currentData.currentFormat]++; 
+                currentData = checkT20SmashTransitions(currentData);
             }
             results.push(result);
             simulatedCount++;
@@ -368,7 +415,7 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
                  showFeedback("Tournament matches completed.", "success");
              }
         }
-    };
+    }, [userTeam, gameData, runSimulationForCurrentFormat, updateStatsFromMatch, checkT20SmashTransitions, setGameData, showFeedback]);
 
     const runOneAutoSim = useCallback(() => {
         setGameData(prev => {
@@ -400,6 +447,7 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
             updatedData = simulateInjuries(updatedData, result);
             updatedData = updateAISquads(updatedData);
             updatedData.currentMatchIndex[currentFormat]++;
+            updatedData = checkT20SmashTransitions(updatedData);
 
             const sponsorship = updatedData.sponsorships?.[currentFormat] || INITIAL_SPONSORSHIPS[currentFormat];
             const newsItem = generateMatchNews(result, currentFormat, sponsorship);
@@ -407,7 +455,7 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
             
             return updatedData;
         });
-    }, [userTeam, runSimulationForCurrentFormat, updateStatsFromMatch, setGameData]);
+    }, [userTeam, runSimulationForCurrentFormat, updateStatsFromMatch, checkT20SmashTransitions, setGameData]);
 
     useEffect(() => {
         let timer: any;
@@ -458,6 +506,7 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
 
              if (updatedData.currentMatchIndex && updatedData.currentMatchIndex[gameData.currentFormat] !== undefined) {
                  updatedData.currentMatchIndex[gameData.currentFormat]++;
+                 updatedData = checkT20SmashTransitions(updatedData);
              }
              const sponsorship = updatedData.sponsorships?.[updatedData.currentFormat] || INITIAL_SPONSORSHIPS[updatedData.currentFormat];
              const newsItem = generateMatchNews(result, updatedData.currentFormat, sponsorship);
@@ -519,6 +568,7 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
 
         if (updatedData.currentMatchIndex && updatedData.currentMatchIndex[gameData.currentFormat] !== undefined) {
             updatedData.currentMatchIndex[gameData.currentFormat]++;
+            updatedData = checkT20SmashTransitions(updatedData);
         }
         const sponsorship = updatedData.sponsorships?.[updatedData.currentFormat] || INITIAL_SPONSORSHIPS[updatedData.currentFormat];
         const newsItem = generateMatchNews(result, updatedData.currentFormat, sponsorship);
@@ -537,6 +587,7 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
         updatedData = updateAISquads(updatedData);
 
         updatedData.currentMatchIndex[gameData.currentFormat]++;
+        updatedData = checkT20SmashTransitions(updatedData);
         updatedData.activeMatch = null; 
         const sponsorship = updatedData.sponsorships?.[updatedData.currentFormat] || INITIAL_SPONSORSHIPS[updatedData.currentFormat];
         const newsItem = generateMatchNews(result, updatedData.currentFormat, sponsorship);
@@ -622,7 +673,7 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
                 return { ...t, squad: aiRetained, purse: STARTING_PURSE + Math.max(0, RETENTION_BUDGET - aiRetentionSpent) };
             });
 
-            const initialStandings = (teams: Team[]) => teams.map(team => ({ teamId: team.id, teamName: team.name, played: 0, won: 0, lost: 0, drawn: 0, points: 0, netRunRate: 0, runsFor: 0, runsAgainst: 0 }));
+            const initialStandings = (teams: Team[]) => teams.map(team => ({ teamId: team.id, teamName: team.name, played: 0, won: 0, lost: 0, drawn: 0, points: 0, netRunRate: 0, runsFor: 0, runsAgainst: 0, oversFor: 0, oversAgainst: 0 }));
 
             const seasonNews: NewsArticle = { 
                 id: `s${prevData.currentSeason}-end`, 
@@ -636,7 +687,7 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
             return {
                 ...prevData,
                 currentSeason: prevData.currentSeason + 1,
-                currentFormat: Format.T20,
+                currentFormat: Format.T20_SMASH,
                 currentMatchIndex: Object.values(Format).reduce((acc, f) => ({ ...acc, [f]: 0 }), {} as Record<Format, number>),
                 matchResults: Object.values(Format).reduce((acc, f) => ({ ...acc, [f]: [] }), {} as Record<Format, MatchResult[]>),
                 standings: Object.values(Format).reduce((acc, f) => ({ ...acc, [f]: initialStandings(newTeams) }), {} as Record<Format, Standing[]>),

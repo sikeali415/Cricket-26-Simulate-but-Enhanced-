@@ -43,7 +43,7 @@ const EndOfFormatScreen: React.FC<EndOfFormatScreenProps> = ({ gameData, handleF
 
                 <div className="w-full max-w-xs space-y-3">
                     <button
-                        onClick={() => handleFormatChange(Format.T20)}
+                        onClick={() => handleFormatChange(Format.T20_SMASH)}
                         className="w-full py-4 bg-teal-500 text-black font-black uppercase italic tracking-widest rounded-2xl shadow-lg active:scale-95 transition-all"
                     >
                         Next Format

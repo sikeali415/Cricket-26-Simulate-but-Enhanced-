@@ -234,7 +234,7 @@ export const App = () => {
     if (!data.news) data.news = INITIAL_NEWS;
     if (!data.records) data.records = { batterVsBowler: [], teamVsTeam: [], playerVsTeam: [] };
     if (!data.currentSeason) data.currentSeason = 1;
-    if (!data.currentFormat) data.currentFormat = Format.T20;
+    if (!data.currentFormat) data.currentFormat = Format.T20_SMASH;
     if (data.popularity === undefined) data.popularity = 50;
     if (!data.grounds) data.grounds = [...GROUNDS];
     if (!data.allTeamsData) data.allTeamsData = [...TEAMS];
@@ -262,7 +262,7 @@ export const App = () => {
             data.standings[f].forEach((s: any) => {
                 const team = data.teams.find((t: any) => t.id === s.teamId);
                 if (team && team.ratings) {
-                    if (f === Format.T20 || f === Format.DEVELOPMENT_T20 || f === Format.RISE_T20) s.rating = team.ratings.t20;
+                    if (f === Format.T20_SMASH || f === Format.DEVELOPMENT_T20 || f === Format.RISE_T20) s.rating = team.ratings.t20;
                     else if (f === Format.ODI || f === Format.DEVELOPMENT_ODI || f === Format.RISE_ODI) s.rating = team.ratings.odi;
                     else s.rating = team.ratings.fc;
                 }
@@ -378,7 +378,7 @@ export const App = () => {
         playingXIs: {},
         bowlingPlans: {},
         currentSeason: 1,
-        currentFormat: Format.T20,
+        currentFormat: Format.T20_SMASH,
         awardsHistory: [],
         scoreLimits: {},
         records: { batterVsBowler: [], teamVsTeam: [], playerVsTeam: [] },
@@ -468,6 +468,8 @@ export const App = () => {
             netRunRate: 0, 
             runsFor: 0, 
             runsAgainst: 0,
+            oversFor: 0,
+            oversAgainst: 0,
             rating: ratings.t20 // Default to T20 for initial view
         };
     });
@@ -510,7 +512,7 @@ export const App = () => {
       playingXIs: {},
       bowlingPlans: {},
       currentSeason: 1,
-      currentFormat: Format.T20, 
+      currentFormat: Format.T20_SMASH, 
       awardsHistory: [],
       scoreLimits: {},
       records: {

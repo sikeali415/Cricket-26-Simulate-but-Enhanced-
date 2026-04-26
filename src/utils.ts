@@ -108,7 +108,7 @@ export const aggregatePlayerStats = (player: Player): Record<string, PlayerStats
 
 export const PITCH_MODIFIERS = {
     "Balanced Sporting Pitch": {
-        [Format.T20]: { runRate: 3.85, wicketChance: 1.20 },
+        [Format.T20_SMASH]: { runRate: 3.85, wicketChance: 1.20 },
         [Format.ODI]: { runRate: 2.45, wicketChance: 1.15 },
         [Format.SHIELD]: { runRate: 1.0, wicketChance: 1.0 },
         [Format.DEVELOPMENT_T20]: { runRate: 3.85, wicketChance: 1.20 },
@@ -124,7 +124,7 @@ export const PITCH_MODIFIERS = {
         unpredictability: 0
     },
     "Dusty Spinner’s Haven": {
-        [Format.T20]: { runRate: 3.10, wicketChance: 1.40 },
+        [Format.T20_SMASH]: { runRate: 3.10, wicketChance: 1.40 },
         [Format.ODI]: { runRate: 2.10, wicketChance: 1.25 },
         [Format.SHIELD]: { runRate: 0.9, wicketChance: 1.15 },
         [Format.DEVELOPMENT_T20]: { runRate: 3.10, wicketChance: 1.40 },
@@ -140,7 +140,7 @@ export const PITCH_MODIFIERS = {
         unpredictability: 0.005
     },
     "Green Top": {
-        [Format.T20]: { runRate: 3.30, wicketChance: 1.45 },
+        [Format.T20_SMASH]: { runRate: 3.30, wicketChance: 1.45 },
         [Format.ODI]: { runRate: 2.20, wicketChance: 1.30 },
         [Format.SHIELD]: { runRate: 0.85, wicketChance: 1.2 },
         [Format.DEVELOPMENT_T20]: { runRate: 3.30, wicketChance: 1.45 },
@@ -156,7 +156,7 @@ export const PITCH_MODIFIERS = {
         unpredictability: 0
     },
     "Batting Paradise": {
-        [Format.T20]: { runRate: 4.40, wicketChance: 1.0 },
+        [Format.T20_SMASH]: { runRate: 4.40, wicketChance: 1.0 },
         [Format.ODI]: { runRate: 2.85, wicketChance: 1.0 },
         [Format.SHIELD]: { runRate: 1.2, wicketChance: 0.85 },
         [Format.DEVELOPMENT_T20]: { runRate: 4.40, wicketChance: 1.0 },
@@ -172,7 +172,7 @@ export const PITCH_MODIFIERS = {
         unpredictability: 0
     },
     "Dead Slow Track": {
-        [Format.T20]: { runRate: 2.75, wicketChance: 1.30 },
+        [Format.T20_SMASH]: { runRate: 2.75, wicketChance: 1.30 },
         [Format.ODI]: { runRate: 2.0, wicketChance: 1.20 },
         [Format.SHIELD]: { runRate: 0.8, wicketChance: 1.1 },
         [Format.DEVELOPMENT_T20]: { runRate: 2.75, wicketChance: 1.30 },
@@ -188,7 +188,7 @@ export const PITCH_MODIFIERS = {
         unpredictability: 0
     },
     "Cracked Worn Surface": {
-        [Format.T20]: { runRate: 3.30, wicketChance: 1.40 },
+        [Format.T20_SMASH]: { runRate: 3.30, wicketChance: 1.40 },
         [Format.ODI]: { runRate: 2.20, wicketChance: 1.30 },
         [Format.SHIELD]: { runRate: 0.75, wicketChance: 1.25 },
         [Format.DEVELOPMENT_T20]: { runRate: 3.30, wicketChance: 1.40 },
@@ -326,7 +326,7 @@ const BATTING_TIERS = {
 };
 
 export const BATTING_PROFILES: any = {
-    [Format.T20]: BATTING_TIERS,
+    [Format.T20_SMASH]: BATTING_TIERS,
     [Format.ODI]: BATTING_TIERS,
     [Format.SHIELD]: BATTING_TIERS,
     [Format.DEVELOPMENT_T20]: BATTING_TIERS,
@@ -343,13 +343,21 @@ export const resolveMatch = (match: Match, gameData: GameData, format: Format): 
     const standings = gameData.standings[format] || [];
     const teams = gameData.teams || [];
 
-    const getTeamFromStanding = (rank: number, group: string) => {
-        const groupKey = group.replace('Group ', '');
+    const getTeamFromStanding = (rank: number, groupName: string) => {
+        // Find teams belonging to this specific group/phase
         const filtered = standings.filter(s => {
             const team = teams.find(t => t.id === s.teamId);
+            // In multi-stage, we might need to check which phase we are looking at
+            // Group stage uses group A/B in team data
+            // Super Six stage needs its own standings (calculated across Super Six matches only)
+            if (groupName.includes('Super Six')) {
+                // For simplicity, we assume Super Six standings are handled separately or we use group property
+                return team?.group === 'Super Six';
+            }
+            const groupKey = groupName.replace('Group ', '');
             return team?.group === groupKey;
         });
-        return filtered[rank - 1]?.teamName || 'TBD';
+        return filtered[rank - 1]?.teamName || `TBD ${groupName} ${rank}`;
     };
 
     const resolvePlaceholder = (placeholder: any): string => {
@@ -358,12 +366,15 @@ export const resolveMatch = (match: Match, gameData: GameData, format: Format): 
         if (placeholder === '1st A') return getTeamFromStanding(1, 'Group A');
         if (placeholder === '2nd A') return getTeamFromStanding(2, 'Group A');
         if (placeholder === '3rd A') return getTeamFromStanding(3, 'Group A');
-        if (placeholder === '4th A') return getTeamFromStanding(4, 'Group A');
         
         if (placeholder === '1st B') return getTeamFromStanding(1, 'Group B');
         if (placeholder === '2nd B') return getTeamFromStanding(2, 'Group B');
         if (placeholder === '3rd B') return getTeamFromStanding(3, 'Group B');
-        if (placeholder === '4th B') return getTeamFromStanding(4, 'Group B');
+
+        if (placeholder === '1st SS') return getTeamFromStanding(1, 'Super Six');
+        if (placeholder === '2nd SS') return getTeamFromStanding(2, 'Super Six');
+        if (placeholder === '3rd SS') return getTeamFromStanding(3, 'Super Six');
+        if (placeholder === '4th SS') return getTeamFromStanding(4, 'Super Six');
 
         if (placeholder === 'SF1 Winner') {
             const sf1Res = gameData.matchResults[format]?.find(r => r && r.matchNumber === 'SF1');
@@ -373,10 +384,6 @@ export const resolveMatch = (match: Match, gameData: GameData, format: Format): 
             const sf2Res = gameData.matchResults[format]?.find(r => r && r.matchNumber === 'SF2');
             return teams.find(t => t.id === sf2Res?.winnerId)?.name || 'SF2 Winner';
         }
-
-        // Generic placeholders
-        if (placeholder.includes('1st')) return getTeamFromStanding(1, placeholder.includes('B') ? 'Group B' : 'Group A');
-        if (placeholder.includes('2nd')) return getTeamFromStanding(2, placeholder.includes('B') ? 'Group B' : 'Group A');
 
         return placeholder;
     };
@@ -486,8 +493,63 @@ export const aggregateStats = (player: Player, formats: Format[]): PlayerStats =
 export const generateLeagueSchedule = (teams: Team[], format: Format, doubleRoundRobin: boolean = true): Match[] => {
     const matches: Match[] = [];
     if (teams.length < 2) return [];
+
+    if (format === Format.T20_SMASH) {
+        // T20 Smash Spec: 2 groups of 8, top 3 advance to Super Six, then top 4 to knockouts
+        const rankedTeams = [...teams].sort((a, b) => (b.overallRating || 0) - (a.overallRating || 0));
+        const groupA: Team[] = []; 
+        const groupB: Team[] = []; 
+
+        rankedTeams.forEach((team, index) => {
+            if (index % 2 === 0) groupA.push({ ...team, group: 'A' });
+            else groupB.push({ ...team, group: 'B' });
+        });
+
+        // 1. Group Stage
+        const generateGroupSchedule = (groupTeams: Team[], groupName: string) => {
+            for (let i = 0; i < groupTeams.length; i++) {
+                for (let j = i + 1; j < groupTeams.length; j++) {
+                    matches.push({
+                        matchNumber: matches.length + 1,
+                        teamA: groupTeams[i].name,
+                        teamAId: groupTeams[i].id,
+                        vs: 'vs',
+                        teamB: groupTeams[j].name,
+                        teamBId: groupTeams[j].id,
+                        date: `${groupName} Rd ${i + j}`,
+                        group: groupName as any
+                    });
+                }
+            }
+        };
+        generateGroupSchedule(groupA, 'Group A');
+        generateGroupSchedule(groupB, 'Group B');
+
+        // 2. Super Six League (6 teams: top 3 from A, top 3 from B)
+        // We use placeholders and simulate their matches
+        const superSixPlaceholders = ['1st A', '2nd A', '3rd A', '1st B', '2nd B', '3rd B'];
+        for (let i = 0; i < superSixPlaceholders.length; i++) {
+            for (let j = i + 1; j < superSixPlaceholders.length; j++) {
+                matches.push({
+                    matchNumber: matches.length + 1,
+                    teamA: superSixPlaceholders[i],
+                    vs: 'vs',
+                    teamB: superSixPlaceholders[j],
+                    date: `Super Six Rd ${i+j}`,
+                    group: 'Super Six' as any
+                });
+            }
+        }
+
+        // 3. Knockouts
+        matches.push({ matchNumber: 'SF1', teamA: '1st SS', vs: 'vs', teamB: '4th SS', date: 'Semi-Final', group: 'Semi-Finals' });
+        matches.push({ matchNumber: 'SF2', teamA: '2nd SS', vs: 'vs', teamB: '3rd SS', date: 'Semi-Final', group: 'Semi-Finals' });
+        matches.push({ matchNumber: 'Final', teamA: 'SF1 Winner', vs: 'vs', teamB: 'SF2 Winner', date: 'Final', group: 'Final' });
+
+        return matches;
+    }
     
-    // Sort teams by overall rating (Descending)
+    // Default Schedule Logic
     const rankedTeams = [...teams].sort((a, b) => (b.overallRating || 0) - (a.overallRating || 0));
 
     const groupA: Team[] = []; // Odd ranks (1st, 3rd, 5th...)
@@ -551,7 +613,7 @@ export const generateLeagueSchedule = (teams: Team[], format: Format, doubleRoun
 export const negotiateSponsorships = (popularity: number): Record<Format, Sponsorship> => {
     const newSponsorships: any = {};
     Object.values(Format).forEach(f => {
-        newSponsorships[f] = { ...INITIAL_SPONSORSHIPS[f] || INITIAL_SPONSORSHIPS[Format.T20] };
+        newSponsorships[f] = { ...INITIAL_SPONSORSHIPS[f] || INITIAL_SPONSORSHIPS[Format.T20_SMASH] };
     });
     return newSponsorships;
 };

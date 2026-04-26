@@ -10,9 +10,9 @@ export const useSimulation = (gameData: GameData, setGameData: React.Dispatch<Re
         // Base categories for pitch modifiers
         const isT20 = format.includes('T20');
         const isODI = format.includes('One-Day') || format.includes('List-A') || format.includes('ODI');
-        const baseFormat = isT20 ? Format.T20 : isODI ? Format.ODI : Format.SHIELD;
+        const baseFormat = isT20 ? Format.T20_SMASH : isODI ? Format.ODI : Format.SHIELD;
         
-        const formatMods = pitchMods[baseFormat] || pitchMods[Format.T20];
+        const formatMods = pitchMods[baseFormat] || pitchMods[Format.T20_SMASH];
         let score = 0, wickets = 0, balls = 0;
         const extras = 0;
         
@@ -681,31 +681,49 @@ export const useSimulation = (gameData: GameData, setGameData: React.Dispatch<Re
             const teamData = newGameData.allTeamsData.find(t => t.id === s.teamId);
             if (teamData) {
                 s.logo = teamData.logo;
-                if (format === Format.T20) s.rating = teamData.ratings?.t20 || 0;
+                if (format === Format.T20_SMASH) s.rating = teamData.ratings?.t20 || 0;
                 else if (format === Format.ODI) s.rating = teamData.ratings?.odi || 0;
                 else if (format === Format.SHIELD) s.rating = teamData.ratings?.fc || 0;
             }
 
-            if (s.teamId === result.firstInning.teamId) {
+            const oversToDecimal = (overs: string) => {
+                const [ov, balls] = overs.split('.').map(Number);
+                return ov + (balls || 0) / 6;
+            };
+
+            const isTeamA = s.teamId === result.firstInning.teamId;
+            const isTeamB = s.teamId === result.secondInning?.teamId;
+
+            if (isTeamA || isTeamB) {
                 s.played++;
+                
+                const myInning = isTeamA ? result.firstInning : result.secondInning;
+                const oppInning = isTeamA ? result.secondInning : result.firstInning;
+                
+                if (myInning && oppInning) {
+                    s.runsFor += myInning.score;
+                    s.runsAgainst += oppInning.score;
+
+                    // If team is all out, they are considered to have faced full quota (20 for T20, 50 for ODI)
+                    const maxOvers = format.includes('T20') ? 20 : 50;
+                    const oversFaced = (myInning.wickets === 10) ? maxOvers : oversToDecimal(myInning.overs);
+                    const oversBowled = (oppInning.wickets === 10) ? maxOvers : oversToDecimal(oppInning.overs);
+
+                    s.oversFor += oversFaced;
+                    s.oversAgainst += oversBowled;
+
+                    if (s.oversFor > 0 && s.oversAgainst > 0) {
+                        s.netRunRate = (s.runsFor / s.oversFor) - (s.runsAgainst / s.oversAgainst);
+                    }
+                }
+
                 if (result.winnerId === s.teamId) {
                     s.won++;
                     s.points += format.includes('First-Class') ? 4 : 2;
                 }
                 else if (!result.winnerId) {
                     s.drawn++;
-                    s.points += 1; // Tie/Draw
-                }
-                else s.lost++;
-            } else if (s.teamId === result.secondInning?.teamId) {
-                s.played++;
-                if (result.winnerId === s.teamId) {
-                    s.won++;
-                    s.points += format.includes('First-Class') ? 4 : 2;
-                }
-                else if (!result.winnerId) {
-                    s.drawn++;
-                    s.points += 1; // Tie/Draw
+                    s.points += 1;
                 }
                 else s.lost++;
             }

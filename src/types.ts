@@ -1,6 +1,6 @@
 
 export enum Format {
-    T20 = 'T20 Smash',
+    T20_SMASH = 'T20 Smash',
     ODI = 'One-day Shield',
     SHIELD = 'FC',
     DEVELOPMENT_T20 = 'Development T20 Cup',
@@ -113,7 +113,7 @@ export interface Team {
     mentality?: number;
     color?: string;
     overallRating?: number;
-    group?: 'A' | 'B' | 'Round-Robin';
+    group?: 'A' | 'B' | 'Round-Robin' | 'Super Six' | 'Eliminated';
     ratings?: {
         t20: number;
         odi: number;
@@ -124,7 +124,7 @@ export interface Team {
 export interface TeamData {
     id: string; name: string; homeGround: string; logo: string; isYouthTeam: boolean;
     overallRating?: number;
-    group?: 'A' | 'B' | 'Round-Robin';
+    group?: 'A' | 'B' | 'Round-Robin' | 'Super Six' | 'Eliminated';
     ratings?: {
         t20: number;
         odi: number;
@@ -172,7 +172,9 @@ export interface MatchResult {
 }
 
 export interface Standing {
-    teamId: string; teamName: string; played: number; won: number; lost: number; drawn: number; points: number; netRunRate: number; runsFor?: number; runsAgainst?: number;
+    teamId: string; teamName: string; played: number; won: number; lost: number; drawn: number; points: number; netRunRate: number; runsFor: number; runsAgainst: number;
+    oversFor: number;
+    oversAgainst: number;
     rating?: number;
     logo?: string;
 }

@@ -278,7 +278,7 @@ export const useLiveMatch = (
             const { currentInningIndex, innings, battingTeam, bowlingTeam, currentBatters, currentBowlerId, target, strategies } = newState;
             
             const pitchMods = PITCH_MODIFIERS[groundPitch as keyof typeof PITCH_MODIFIERS] || PITCH_MODIFIERS["Balanced Sporting Pitch"];
-            const formatMods = pitchMods[gameData.currentFormat] || pitchMods[Format.T20];
+            const formatMods = pitchMods[gameData.currentFormat] || pitchMods[Format.T20_SMASH];
             
             const strikerIdx = currentInning.batting.findIndex(b => b.playerId === currentBatters.strikerId);
             const nonStrikerIdx = currentInning.batting.findIndex(b => b.playerId === currentBatters.nonStrikerId);

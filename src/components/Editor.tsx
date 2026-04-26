@@ -22,7 +22,7 @@ const Editor: React.FC<EditorProps> = ({ gameData, handleUpdatePlayer, handleCre
     const [editType, setEditType] = useState<'players' | 'grounds' | 'rules'>('players');
     const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
     const [isCreating, setIsCreating] = useState(false);
-    const [editorFormatTab, setEditorFormatTab] = useState<Format>(Format.T20);
+    const [editorFormatTab, setEditorFormatTab] = useState<Format>(Format.T20_SMASH);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isUploading, setIsUploading] = useState(false);
 

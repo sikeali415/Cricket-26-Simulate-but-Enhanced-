@@ -25,7 +25,7 @@ export const TOURNAMENT_LOGOS = [
 ];
 
 export const SPONSOR_THRESHOLDS = {
-    [Format.T20]: { "Sike's": 40, "Apex": 35, "Malik": 30, "G.S": 25 },
+    [Format.T20_SMASH]: { "Sike's": 40, "Apex": 35, "Malik": 30, "G.S": 25 },
     [Format.ODI]: { "Sike's": 45, "Apex": 40, "Malik": 30, "G.S": 25 },
     [Format.SHIELD]: { "Sike's": 40, "Apex": 35, "Malik": 30, "G.S": 25 },
     [Format.DEVELOPMENT_T20]: { "Sike's": 20, "Apex": 15, "Malik": 10, "G.S": 5 },
@@ -37,7 +37,7 @@ export const SPONSOR_THRESHOLDS = {
 };
 
 export const INITIAL_SPONSORSHIPS: Record<Format, Sponsorship> = {
-    [Format.T20]: { sponsorName: "Sike's", tournamentName: "Super Smash 26", logoColor: "text-yellow-500", tournamentLogo: TOURNAMENT_LOGOS[0].svg, tvChannel: "CricketNow HD", tvLogo: "" },
+    [Format.T20_SMASH]: { sponsorName: "Sike's", tournamentName: "Super Smash 26", logoColor: "text-yellow-500", tournamentLogo: TOURNAMENT_LOGOS[0].svg, tvChannel: "CricketNow HD", tvLogo: "" },
     [Format.ODI]: { sponsorName: "Apex", tournamentName: "Pro Cup 26", logoColor: "text-cyan-400", tournamentLogo: TOURNAMENT_LOGOS[0].svg, tvChannel: "Apex Sports", tvLogo: "" },
     [Format.SHIELD]: { sponsorName: "Malik", tournamentName: "Shield 26", logoColor: "text-red-600", tournamentLogo: TOURNAMENT_LOGOS[1].svg, tvChannel: "PrimeCast Ultra", tvLogo: "" },
     [Format.DEVELOPMENT_T20]: { sponsorName: "G.S", tournamentName: "Dev T20 Cup", logoColor: "text-green-500", tournamentLogo: TOURNAMENT_LOGOS[0].svg, tvChannel: "Dev Channel", tvLogo: "" },

@@ -226,7 +226,7 @@ const BowlingPlanEditor = ({ state, gameData, updateBowlingPlan, onClose }: Bowl
     const teamId = gameData.userTeamId;
     const bowlingTeam = state.bowlingTeam.id === teamId ? state.bowlingTeam : state.battingTeam;
     const format = gameData.currentFormat;
-    const maxOvers = format === Format.T20 ? 20 : (format === Format.ODI ? 50 : 90);
+    const maxOvers = format === Format.T20_SMASH ? 20 : (format === Format.ODI ? 50 : 90);
     
     const bowlers = bowlingTeam.squad.filter(p => [PlayerRole.FAST_BOWLER, PlayerRole.SPIN_BOWLER, PlayerRole.ALL_ROUNDER].includes(p.role));
     

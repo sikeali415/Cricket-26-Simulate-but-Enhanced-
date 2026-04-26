@@ -30,6 +30,10 @@ const Standings: React.FC<StandingsProps> = ({ gameData, onViewScorecard, onView
         const team = gameData.teams.find(t => t.id === s.teamId);
         return team?.group === 'B';
     });
+    const superSixStandings = sortedStandings.filter(s => {
+        const team = gameData.teams.find(t => t.id === s.teamId);
+        return team?.group === 'Super Six';
+    });
     const roundRobinStandings = sortedStandings.filter(s => {
         const team = gameData.teams.find(t => t.id === s.teamId);
         return !team?.group || team.group === 'Round-Robin';
@@ -139,9 +143,10 @@ const Standings: React.FC<StandingsProps> = ({ gameData, onViewScorecard, onView
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: 10 }}
                         >
-                            {groupAStandings.length > 0 && renderTable(groupAStandings, 'Group A')}
-                            {groupBStandings.length > 0 && renderTable(groupBStandings, 'Group B')}
-                            {roundRobinStandings.length > 0 && groupAStandings.length === 0 && renderTable(roundRobinStandings, 'Global Standings')}
+                            {superSixStandings.length > 0 && renderTable(superSixStandings, 'Super Six League')}
+                            {groupAStandings.length > 0 && superSixStandings.length === 0 && renderTable(groupAStandings, 'Group A')}
+                            {groupBStandings.length > 0 && superSixStandings.length === 0 && renderTable(groupBStandings, 'Group B')}
+                            {roundRobinStandings.length > 0 && groupAStandings.length === 0 && superSixStandings.length === 0 && renderTable(roundRobinStandings, 'Global Standings')}
                         </motion.div>
                     ) : (
                         <motion.div 
