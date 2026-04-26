@@ -393,10 +393,10 @@ export const resolveMatch = (match: Match, gameData: GameData, format: Format): 
         if (placeholder === '2nd B') return getTeamFromStanding(2, 'Group B');
         if (placeholder === '3rd B') return getTeamFromStanding(3, 'Group B');
 
-        if (placeholder === '1st SS') return getTeamFromStanding(1, 'Super Six');
-        if (placeholder === '2nd SS') return getTeamFromStanding(2, 'Super Six');
-        if (placeholder === '3rd SS') return getTeamFromStanding(3, 'Super Six');
-        if (placeholder === '4th SS') return getTeamFromStanding(4, 'Super Six');
+        if (placeholder === '1st') return getTeamFromStanding(1, 'Round-Robin');
+        if (placeholder === '2nd') return getTeamFromStanding(2, 'Round-Robin');
+        if (placeholder === '3rd') return getTeamFromStanding(3, 'Round-Robin');
+        if (placeholder === '4th') return getTeamFromStanding(4, 'Round-Robin');
 
         if (placeholder === 'SF1 Winner') {
             const sf1Res = gameData.matchResults[format]?.find(r => r && r.matchNumber === 'SF1');
@@ -517,55 +517,40 @@ export const generateLeagueSchedule = (teams: Team[], format: Format, doubleRoun
     if (teams.length < 2) return [];
 
     if (format === Format.T20_SMASH) {
-        // T20 Smash Spec: 2 groups of 8, top 3 advance to Super Six, then top 4 to knockouts
-        const rankedTeams = [...teams].sort((a, b) => (b.overallRating || 0) - (a.overallRating || 0));
-        const groupA: Team[] = []; 
-        const groupB: Team[] = []; 
+        // T20 Smash Spec: 16 teams, 80 cyclic fixtures (10 matches each), top 4 knockouts
+        const teamNamesOrder = [
+            'KNIGHTS', 'FALCONS', 'KINGS', 'RIDERS', 'CHARGERS', 'HAWKS', 'WARRIORS', 'EAGLES',
+            'PANTHERS', 'GLADIATORS', 'STARS', 'STRIKERS', 'TITANS', 'SIXERS', 'ROYALS', 'BLAZERS'
+        ];
 
-        rankedTeams.forEach((team, index) => {
-            if (index % 2 === 0) groupA.push({ ...team, group: 'A' });
-            else groupB.push({ ...team, group: 'B' });
-        });
+        // Map teams by their uppercase name to find correct IDs
+        const teamMap = new Map<string, Team>();
+        teams.forEach(t => teamMap.set(t.name.toUpperCase(), t));
 
-        // 1. Group Stage
-        const generateGroupSchedule = (groupTeams: Team[], groupName: string) => {
-            for (let i = 0; i < groupTeams.length; i++) {
-                for (let j = i + 1; j < groupTeams.length; j++) {
-                    matches.push({
-                        matchNumber: matches.length + 1,
-                        teamA: groupTeams[i].name,
-                        teamAId: groupTeams[i].id,
-                        vs: 'vs',
-                        teamB: groupTeams[j].name,
-                        teamBId: groupTeams[j].id,
-                        date: `${groupName} Rd ${i + j}`,
-                        group: groupName as any
-                    });
-                }
-            }
-        };
-        generateGroupSchedule(groupA, 'Group A');
-        generateGroupSchedule(groupB, 'Group B');
+        const orderedTeams = teamNamesOrder.map(name => teamMap.get(name) || teams.find(t => t.name.toUpperCase() === name) || teams[0]);
 
-        // 2. Super Six League (6 teams: top 3 from A, top 3 from B)
-        // We use placeholders and simulate their matches
-        const superSixPlaceholders = ['1st A', '2nd A', '3rd A', '1st B', '2nd B', '3rd B'];
-        for (let i = 0; i < superSixPlaceholders.length; i++) {
-            for (let j = i + 1; j < superSixPlaceholders.length; j++) {
+        // Generate 5 sets of 16 matches each (cyclic)
+        for (let step = 1; step <= 5; step++) {
+            for (let i = 0; i < 16; i++) {
+                const teamA = orderedTeams[i];
+                const teamB = orderedTeams[(i + step) % 16];
+                
                 matches.push({
                     matchNumber: matches.length + 1,
-                    teamA: superSixPlaceholders[i],
+                    teamA: teamA.name,
+                    teamAId: teamA.id,
                     vs: 'vs',
-                    teamB: superSixPlaceholders[j],
-                    date: `Super Six Rd ${i+j}`,
-                    group: 'Super Six' as any
+                    teamB: teamB.name,
+                    teamBId: teamB.id,
+                    date: `Set ${step} - Round ${i + 1}`,
+                    group: 'Round-Robin' as any
                 });
             }
         }
 
-        // 3. Knockouts
-        matches.push({ matchNumber: 'SF1', teamA: '1st SS', vs: 'vs', teamB: '4th SS', date: 'Semi-Final', group: 'Semi-Finals' });
-        matches.push({ matchNumber: 'SF2', teamA: '2nd SS', vs: 'vs', teamB: '3rd SS', date: 'Semi-Final', group: 'Semi-Finals' });
+        // Knockouts
+        matches.push({ matchNumber: 'SF1', teamA: '1st', vs: 'vs', teamB: '4th', date: 'Semi-Final', group: 'Semi-Finals' });
+        matches.push({ matchNumber: 'SF2', teamA: '2nd', vs: 'vs', teamB: '3rd', date: 'Semi-Final', group: 'Semi-Finals' });
         matches.push({ matchNumber: 'Final', teamA: 'SF1 Winner', vs: 'vs', teamB: 'SF2 Winner', date: 'Final', group: 'Final' });
 
         return matches;

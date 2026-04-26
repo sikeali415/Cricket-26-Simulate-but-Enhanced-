@@ -163,65 +163,28 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
 
     const checkT20SmashTransitions = useCallback((data: GameData): GameData => {
         if (data.currentFormat !== Format.T20_SMASH) return data;
-        const schedule = data.schedule[Format.T20_SMASH];
         const currentIndex = data.currentMatchIndex[Format.T20_SMASH];
-        if (!schedule) return data;
 
-        // Transition 1: Group Stage (56 matches) -> Super Six
-        if (currentIndex === 56) {
-            const hasStartedSuperSix = data.teams.some(t => t.group === 'Super Six');
-            if (!hasStartedSuperSix) {
+        // Transition: League Stage (80 matches) -> Semi-Finals News
+        if (currentIndex === 80) {
+            const newsId = `knockouts-start-${data.currentSeason}`;
+            const hasStartedKnockouts = data.news?.some(n => n.id === newsId);
+            if (!hasStartedKnockouts) {
                 const standings = data.standings[Format.T20_SMASH] || [];
-                const sortedStandings = [...standings].sort((a, b) => {
+                const rrStandings = standings.sort((a, b) => {
                     if (b.points !== a.points) return b.points - a.points;
                     if (b.netRunRate !== a.netRunRate) return b.netRunRate - a.netRunRate;
                     return b.won - a.won;
                 });
 
-                const topA = sortedStandings.filter(s => data.teams.find(t => t.id === s.teamId)?.group === 'A').slice(0, 3);
-                const topB = sortedStandings.filter(s => data.teams.find(t => t.id === s.teamId)?.group === 'B').slice(0, 3);
-                const superSixIds = new Set([...topA, ...topB].map(s => s.teamId));
-
-                const newTeams = data.teams.map(t => ({
-                    ...t,
-                    group: superSixIds.has(t.id) ? 'Super Six' as any : 'Eliminated' as any
-                }));
-
-                const seasonNews: NewsArticle = {
-                    id: `super-six-start-${data.currentSeason}`,
-                    headline: "Super Six Stage Commences!",
-                    date: new Date().toLocaleDateString(),
-                    excerpt: "The top teams have advanced.",
-                    content: `The group stages are over. Group A qualifiers: ${topA.map(s => s.teamName).join(', ')}. Group B qualifiers: ${topB.map(s => s.teamName).join(', ')}. They now enter the Super Six battle!`,
-                    type: 'league'
-                };
-
-                return { ...data, teams: newTeams, news: [seasonNews, ...(data.news || [])].slice(0, 50) };
-            }
-        }
-
-        // Transition 2: Super Six (15 matches, ends at index 71) -> Semi-Finals News
-        if (currentIndex === 71) {
-            const newsId = `knockouts-start-${data.currentSeason}`;
-            const hasStartedKnockouts = data.news?.some(n => n.id === newsId);
-            if (!hasStartedKnockouts) {
-                const standings = data.standings[Format.T20_SMASH] || [];
-                const ssTeams = data.teams.filter(t => t.group === 'Super Six');
-                const ssStandings = standings.filter(s => ssTeams.some(t => t.id === s.teamId))
-                    .sort((a, b) => {
-                        if (b.points !== a.points) return b.points - a.points;
-                        if (b.netRunRate !== a.netRunRate) return b.netRunRate - a.netRunRate;
-                        return b.won - a.won;
-                    });
-
-                const top4 = ssStandings.slice(0, 4);
+                const top4 = rrStandings.slice(0, 4);
 
                 const knockoutsNews: NewsArticle = {
                     id: newsId,
                     headline: "The T20 Smash Final Four are Decided!",
                     date: new Date().toLocaleDateString(),
                     excerpt: "Knockout stage begins now.",
-                    content: `The Super Six battle has concluded. The semi-finalists are: ${top4.map(s => s.teamName).join(', ')}. It's win or go home from here!`,
+                    content: `The 80-match league battle has concluded. The semi-finalists are: ${top4.map(s => s.teamName).join(', ')}. It's win or go home from here!`,
                     type: 'league'
                 };
 
