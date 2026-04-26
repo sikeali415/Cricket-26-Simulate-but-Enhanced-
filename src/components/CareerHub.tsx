@@ -199,6 +199,35 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
                 return { ...data, teams: newTeams, news: [seasonNews, ...(data.news || [])].slice(0, 50) };
             }
         }
+
+        // Transition 2: Super Six (15 matches, ends at index 71) -> Semi-Finals News
+        if (currentIndex === 71) {
+            const newsId = `knockouts-start-${data.currentSeason}`;
+            const hasStartedKnockouts = data.news?.some(n => n.id === newsId);
+            if (!hasStartedKnockouts) {
+                const standings = data.standings[Format.T20_SMASH] || [];
+                const ssTeams = data.teams.filter(t => t.group === 'Super Six');
+                const ssStandings = standings.filter(s => ssTeams.some(t => t.id === s.teamId))
+                    .sort((a, b) => {
+                        if (b.points !== a.points) return b.points - a.points;
+                        if (b.netRunRate !== a.netRunRate) return b.netRunRate - a.netRunRate;
+                        return b.won - a.won;
+                    });
+
+                const top4 = ssStandings.slice(0, 4);
+
+                const knockoutsNews: NewsArticle = {
+                    id: newsId,
+                    headline: "The T20 Smash Final Four are Decided!",
+                    date: new Date().toLocaleDateString(),
+                    excerpt: "Knockout stage begins now.",
+                    content: `The Super Six battle has concluded. The semi-finalists are: ${top4.map(s => s.teamName).join(', ')}. It's win or go home from here!`,
+                    type: 'league'
+                };
+
+                return { ...data, news: [knockoutsNews, ...(data.news || [])].slice(0, 50) };
+            }
+        }
         return data;
     }, []);
 
@@ -317,7 +346,7 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
         });
     };
 
-    const simulateBackgroundMatches = (currentData: GameData): GameData => {
+    const simulateBackgroundMatches = useCallback((currentData: GameData): GameData => {
         if (!currentData || !currentData.schedule || !currentData.currentMatchIndex) return currentData;
         let updatedData = JSON.parse(JSON.stringify(currentData)) as GameData;
         const formats = Object.values(Format);
@@ -342,7 +371,7 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
             }
         });
         return updatedData;
-    };
+    }, [runSimulationForCurrentFormat, updateStatsFromMatch, checkT20SmashTransitions]);
 
     const handleForwardDay = useCallback(() => {
         if (!userTeam) return;
@@ -415,7 +444,7 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
                  showFeedback("Tournament matches completed.", "success");
              }
         }
-    }, [userTeam, gameData, runSimulationForCurrentFormat, updateStatsFromMatch, checkT20SmashTransitions, setGameData, showFeedback]);
+    }, [userTeam, gameData, runSimulationForCurrentFormat, updateStatsFromMatch, checkT20SmashTransitions, setGameData, showFeedback, simulateBackgroundMatches]);
 
     const runOneAutoSim = useCallback(() => {
         setGameData(prev => {

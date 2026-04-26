@@ -488,7 +488,8 @@ export const App = () => {
     const sortedByRating = [...rankedTeamsRaw].sort((a, b) => b.overallRating - a.overallRating);
     const rankedTeamsWithRatings: Team[] = rankedTeamsRaw.map(team => {
         const rank = sortedByRating.findIndex(t => t.id === team.id) + 1;
-        return { ...team, group: (rank % 2 !== 0 ? 'A' : 'B') as 'A' | 'B' };
+        const groupKey = (rank % 2 !== 0 ? 'A' : 'B') as 'A' | 'B';
+        return { ...team, group: groupKey, initialGroup: groupKey };
     });
 
     const schedules = Object.values(Format).reduce((acc, format) => {

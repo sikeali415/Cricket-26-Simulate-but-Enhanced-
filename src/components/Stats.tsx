@@ -14,6 +14,7 @@ const Stats: React.FC<StatsProps> = ({ gameData, viewPlayerProfile }) => {
     const [sortField, setSortField] = useState<string>('runs');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const [selectedCategory, setSelectedCategory] = useState<FormatCategory>(getFormatCategory(gameData.currentFormat));
+    const [searchQuery, setSearchQuery] = useState('');
     
     const playersWithStats = gameData.allPlayers.map(p => {
         const aggregated = aggregatePlayerStats(p);
@@ -21,7 +22,12 @@ const Stats: React.FC<StatsProps> = ({ gameData, viewPlayerProfile }) => {
             ...p,
             displayStats: aggregated[selectedCategory]
         };
-    }).filter(p => p.displayStats && p.displayStats.matches > 0);
+    }).filter(p => {
+        const hasStats = p.displayStats && p.displayStats.matches > 0;
+        if (!hasStats) return false;
+        if (searchQuery.trim() === '') return true;
+        return p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    });
 
     const handleSort = (field: string) => {
         if (sortField === field) {
@@ -65,6 +71,16 @@ const Stats: React.FC<StatsProps> = ({ gameData, viewPlayerProfile }) => {
                             {cat}
                         </button>
                     ))}
+                </div>
+
+                <div className="relative mb-4">
+                    <input
+                        type="text"
+                        placeholder="Search Player..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/50 transition-all"
+                    />
                 </div>
 
                 <div className="flex p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">

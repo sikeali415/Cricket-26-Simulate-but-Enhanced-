@@ -266,14 +266,11 @@ export const getPlayerById = (id: string, allPlayers: Player[]) => {
 export const generateAutoXI = (squad: Player[], format: Format) => {
     const xi: Player[] = [];
     const used = new Set<string>();
-    let foreignInXI = 0;
-
+    
     const add = (p: Player) => {
         if (used.has(p.id)) return false;
-        if (p.isForeign && foreignInXI >= 5) return false; // Increased limit to 5
         xi.push(p);
         used.add(p.id);
-        if (p.isForeign) foreignInXI++;
         return true;
     };
 
@@ -282,16 +279,40 @@ export const generateAutoXI = (squad: Player[], format: Format) => {
     if (keeper) add(keeper);
 
     // 2. Openers
-    squad.filter(p => p.isOpener && !used.has(p.id)).sort((a,b) => b.battingSkill - a.battingSkill).slice(0, 2).forEach(add);
+    const openers = squad.filter(p => p.isOpener && !used.has(p.id)).sort((a,b) => b.battingSkill - a.battingSkill).slice(0, 2);
+    openers.forEach(add);
 
-    // 3. Best remaining players
-    const remaining = squad.filter(p => !used.has(p.id)).sort((a,b) => (b.battingSkill + b.secondarySkill) - (a.battingSkill + a.secondarySkill));
-    remaining.forEach(p => { if (xi.length < 11) add(p); });
+    // 3. Best 4 Batters/All-rounders (to get to 7 total including openers and keeper)
+    const midOrder = squad.filter(p => !used.has(p.id) && [PlayerRole.BATSMAN, PlayerRole.ALL_ROUNDER].includes(p.role))
+        .sort((a,b) => b.battingSkill - a.battingSkill)
+        .slice(0, 7 - xi.length);
+    midOrder.forEach(add);
 
-    // 4. Fill if still short (ignoring foreign limit)
-    squad.filter(p => !used.has(p.id)).forEach(p => { if (xi.length < 11) { xi.push(p); used.add(p.id); } });
+    // 4. Best 4 Bowlers (combo)
+    const pBowlers = squad.filter(p => !used.has(p.id) && [PlayerRole.FAST_BOWLER, PlayerRole.SPIN_BOWLER].includes(p.role))
+        .sort((a,b) => b.secondarySkill - a.secondarySkill);
+    
+    // Ensure at least 1 spin, 1 fast if possible
+    const spin = pBowlers.find(p => p.role === PlayerRole.SPIN_BOWLER);
+    const fast = pBowlers.find(p => p.role === PlayerRole.FAST_BOWLER);
+    if (spin) add(spin);
+    if (fast) add(fast);
+    
+    // Remaining bowlers to fill 4 slots
+    const remBowlers = squad.filter(p => !used.has(p.id) && [PlayerRole.FAST_BOWLER, PlayerRole.SPIN_BOWLER, PlayerRole.ALL_ROUNDER].includes(p.role))
+        .sort((a,b) => b.secondarySkill - a.secondarySkill);
+    remBowlers.forEach(p => { if (xi.length < 11) add(p); });
 
-    return xi.slice(0, 11);
+    // 5. Fill if still short
+    squad.filter(p => !used.has(p.id)).sort((a,b) => Math.max(a.battingSkill, a.secondarySkill) - Math.max(b.battingSkill, b.secondarySkill))
+        .forEach(p => { if (xi.length < 11) add(p); });
+
+    // Order: Opening pair, then rest by batting skill
+    const finalXi = [...xi];
+    const finalOpeners = finalXi.filter(p => p.isOpener).slice(0, 2);
+    const rest = finalXi.filter(p => !finalOpeners.includes(p));
+    
+    return [...finalOpeners, ...rest].slice(0, 11);
 };
 
 export const getBatterTier = (battingSkill: number) => {
@@ -344,18 +365,19 @@ export const resolveMatch = (match: Match, gameData: GameData, format: Format): 
     const teams = gameData.teams || [];
 
     const getTeamFromStanding = (rank: number, groupName: string) => {
-        // Find teams belonging to this specific group/phase
-        const filtered = standings.filter(s => {
+        const sortedStandings = [...standings].sort((a, b) => {
+            if (b.points !== a.points) return b.points - a.points;
+            if (b.netRunRate !== a.netRunRate) return b.netRunRate - a.netRunRate;
+            return b.won - a.won;
+        });
+
+        const filtered = sortedStandings.filter(s => {
             const team = teams.find(t => t.id === s.teamId);
-            // In multi-stage, we might need to check which phase we are looking at
-            // Group stage uses group A/B in team data
-            // Super Six stage needs its own standings (calculated across Super Six matches only)
             if (groupName.includes('Super Six')) {
-                // For simplicity, we assume Super Six standings are handled separately or we use group property
                 return team?.group === 'Super Six';
             }
             const groupKey = groupName.replace('Group ', '');
-            return team?.group === groupKey;
+            return team?.initialGroup === groupKey;
         });
         return filtered[rank - 1]?.teamName || `TBD ${groupName} ${rank}`;
     };

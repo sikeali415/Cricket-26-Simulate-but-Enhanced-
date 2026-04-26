@@ -1108,9 +1108,14 @@ const LiveMatchScreen: React.FC<LiveMatchScreenProps> = ({ match, gameData, onMa
                                                         <div className="flex items-center gap-1.5">
                                                             <span className="text-[7px] text-white/10 font-mono w-2">{currentInning.batting.findIndex(pb => pb.playerId === b.playerId) + 1}</span>
                                                             <div className="flex flex-col">
-                                                                <span className="font-black italic uppercase tracking-tighter">
-                                                                    {b.playerName} {b.playerId === currentBatters.strikerId ? '*' : ''}
-                                                                </span>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <span className="font-black italic uppercase tracking-tighter">
+                                                                        {b.playerName} {b.playerId === currentBatters.strikerId ? '*' : ''}
+                                                                    </span>
+                                                                    <span className="text-[6px] font-black text-white/20 uppercase tracking-widest bg-white/5 px-1 rounded">
+                                                                        AVG: {gameData.allPlayers.find(p => p.id === b.playerId)?.stats?.[gameData.currentFormat]?.average.toFixed(1) || '0.0'}
+                                                                    </span>
+                                                                </div>
                                                                 <span className="text-[6px] text-teal-500/60 font-black uppercase tracking-widest">
                                                                     {b.isOut ? b.dismissalText : isBatting ? 'BATTING' : ''}
                                                                 </span>
@@ -1158,8 +1163,17 @@ const LiveMatchScreen: React.FC<LiveMatchScreenProps> = ({ match, gameData, onMa
                                 <tbody>
                                     {currentInning.bowling.filter(b => parseFloat(b.overs) > 0 || b.playerId === currentBowlerId).map(b => (
                                         <tr key={b.playerId} className="border-b border-white/[0.02] text-white">
-                                            <td className="py-1.5 font-black italic uppercase tracking-tighter">
-                                                {b.playerName} {b.playerId === currentBowlerId ? '🥎' : ''}
+                                            <td className="py-1.5">
+                                                <div className="flex flex-col">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="font-black italic uppercase tracking-tighter">
+                                                            {b.playerName} {b.playerId === currentBowlerId ? '🥎' : ''}
+                                                        </span>
+                                                        <span className="text-[6px] font-black text-white/20 uppercase tracking-widest bg-white/5 px-1 rounded">
+                                                            ECN: {gameData.allPlayers.find(p => p.id === b.playerId)?.stats?.[gameData.currentFormat]?.economy.toFixed(1) || '0.0'}
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             </td>
                                             <td className="text-right font-mono">{b.overs}</td>
                                             <td className="text-right">{b.maidens}</td>
@@ -1676,6 +1690,7 @@ const LiveMatchScreen: React.FC<LiveMatchScreenProps> = ({ match, gameData, onMa
                                     <span>{bowler?.wickets}-{bowler?.runsConceded}</span> 
                                     <span className="text-white/20">({bowler?.overs})</span>
                                     <span className="text-pink-500">ECN: {((bowler?.runsConceded || 0) / (parseFloat(bowler?.overs || '0.1') || 0.1)).toFixed(1)}</span>
+                                    <span className="text-white/20">C.ECO: {gameData.allPlayers.find(p => p.id === bowler?.playerId)?.stats?.[gameData.currentFormat]?.economy.toFixed(1) || '0.0'}</span>
                                 </div>
                             </div>
                         </div>
@@ -1706,6 +1721,7 @@ const LiveMatchScreen: React.FC<LiveMatchScreenProps> = ({ match, gameData, onMa
                                         <span className="text-white">{striker?.runs}</span>
                                         <span className="text-white/20">({striker?.balls})</span>
                                         <span className="text-teal-500">S/R: {((striker?.runs || 0) / (striker?.balls || 1) * 100).toFixed(0)}</span>
+                                        <span className="text-white/20">C.AVG: {gameData.allPlayers.find(p => p.id === striker?.playerId)?.stats?.[gameData.currentFormat]?.average.toFixed(1) || '0.0'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -1729,6 +1745,7 @@ const LiveMatchScreen: React.FC<LiveMatchScreenProps> = ({ match, gameData, onMa
                                         <span>{nonStriker?.runs}</span>
                                         <span className="text-white/10">({nonStriker?.balls})</span>
                                         <span className="text-white/40">S/R: {((nonStriker?.runs || 0) / (nonStriker?.balls || 1) * 100).toFixed(0)}</span>
+                                        <span className="text-white/10">C.AVG: {gameData.allPlayers.find(p => p.id === nonStriker?.playerId)?.stats?.[gameData.currentFormat]?.average.toFixed(1) || '0.0'}</span>
                                     </div>
                                 </div>
                             </div>

@@ -114,6 +114,7 @@ export interface Team {
     color?: string;
     overallRating?: number;
     group?: 'A' | 'B' | 'Round-Robin' | 'Super Six' | 'Eliminated';
+    initialGroup?: 'A' | 'B';
     ratings?: {
         t20: number;
         odi: number;
@@ -125,6 +126,7 @@ export interface TeamData {
     id: string; name: string; homeGround: string; logo: string; isYouthTeam: boolean;
     overallRating?: number;
     group?: 'A' | 'B' | 'Round-Robin' | 'Super Six' | 'Eliminated';
+    initialGroup?: 'A' | 'B';
     ratings?: {
         t20: number;
         odi: number;
@@ -138,7 +140,7 @@ export interface Ground {
 }
 
 export interface Match {
-    matchNumber: number | string; teamA: string; teamAId?: string; vs: string; teamB: string; teamBId?: string; date: string; group: 'Group A' | 'Group B' | 'Round-Robin' | 'Semi-Finals' | 'Final';
+    matchNumber: number | string; teamA: string; teamAId?: string; vs: string; teamB: string; teamBId?: string; date: string; group: 'Group A' | 'Group B' | 'Round-Robin' | 'Super Six' | 'Semi-Finals' | 'Final';
 }
 
 export interface Inning {
