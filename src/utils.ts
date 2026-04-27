@@ -537,14 +537,20 @@ export const generateLeagueSchedule = (teams: Team[], format: Format, doubleRoun
         const teamMap = new Map<string, Team>();
         teams.forEach(t => teamMap.set(t.name.toUpperCase(), t));
 
-        const orderedTeams = teamNamesOrder.map(name => {
-            return teamMap.get(name) || teams.find(t => t.name.toUpperCase() === name) || teams[0];
-        });
+        // Use initialGroup assigned by randomizeT20SmashGroups or similar logic
+        const grA = teams.filter(t => t.initialGroup === 'A');
+        const grB = teams.filter(t => t.initialGroup === 'B');
 
-        const grA = orderedTeams.slice(0, 8);
-        const grB = orderedTeams.slice(8, 16);
+        // Fallback for safety if groups not assigned
+        if (grA.length !== 8 || grB.length !== 8) {
+             const orderedTeams = teamNamesOrder.map(name => {
+                 return teamMap.get(name) || teams.find(t => t.name.toUpperCase() === name) || teams[0];
+             });
+             grA.length = 0; grA.push(...orderedTeams.slice(0, 8));
+             grB.length = 0; grB.push(...orderedTeams.slice(8, 16));
+        }
 
-        // 1. Group Stage (56 matches)
+        // 1. Group Stage (56 matches total: 28 per group)
         const generateGroup = (gTeams: Team[], gName: string) => {
             for (let i = 0; i < gTeams.length; i++) {
                 for (let j = i + 1; j < gTeams.length; j++) {
@@ -797,6 +803,15 @@ export const isTeamonLosingStreak = (teamId: string, format: Format, gameData: G
     
     if (teamResults.length < 2) return false;
     return teamResults.every(r => r.loserId === teamId);
+};
+
+export const randomizeT20SmashGroups = (teams: Team[]): Team[] => {
+    // 16 teams. Shuffle all. 8 to A, 8 to B.
+    const shuffled = [...teams].sort(() => Math.random() - 0.5);
+    return teams.map(t => {
+        const sIndex = shuffled.findIndex(st => st.id === t.id);
+        return { ...t, initialGroup: sIndex < 8 ? 'A' : 'B' };
+    });
 };
 
 export const getSmartAILineup = (team: Team, format: Format, group?: string, forceReshuffle: boolean = false) => {

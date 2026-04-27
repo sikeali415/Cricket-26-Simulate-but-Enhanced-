@@ -13,6 +13,7 @@ import CareerHub from './components/CareerHub';
 import AuctionRoom from './components/AuctionRoom';
 import Lineups from './components/Lineups';
 import Editor from './components/Editor';
+import HelpSection from './components/HelpSection';
 
 export const MAX_SQUAD_SIZE = 16;
 export const MIN_SQUAD_SIZE = 16;
@@ -45,18 +46,18 @@ const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
         <div className="w-48 h-48 md:w-64 md:h-64 mb-8 relative">
           <div className="absolute inset-0 bg-teal-500/20 blur-3xl rounded-full animate-pulse" />
           <div className="w-full h-full glass-card flex items-center justify-center p-8 border-2 border-white/10 shadow-[0_0_50px_rgba(20,184,166,0.2)] rounded-[40px]">
-            <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
-              <path d="M50 5 L95 25 L95 75 L50 95 L5 75 L5 25 Z" fill="none" stroke="currentColor" strokeWidth="2" className="text-teal-500" />
-              <text x="50" y="65" fontFamily="Outfit" fontSize="40" fontWeight="900" fill="white" textAnchor="middle">S26</text>
-            </svg>
+            <div className="flex flex-col items-center">
+                <span className="text-teal-500 font-black italic text-8xl leading-none">SC</span>
+                <span className="text-[10px] font-black text-white/40 tracking-[0.4em] mt-2">EST. 2026</span>
+            </div>
           </div>
         </div>
 
         <div className="text-center space-y-2">
           <h1 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter text-white leading-none">
-            SIKE'S <span className="text-teal-500">SUPER SMASH</span> 26
+            SIMULATION <span className="text-teal-500">CRICKET</span> MANAGER
           </h1>
-          <p className="text-[10px] md:text-xs font-black text-white/30 uppercase tracking-[0.6em]">SEASON 1 // OFFICIAL_BROADCAST</p>
+          <p className="text-[10px] md:text-xs font-black text-white/30 uppercase tracking-[0.6em]">OFFICIAL_v0.0.1 // BROADCAST_INIT</p>
         </div>
 
         <div className="mt-12 flex items-center gap-4 text-white/20">
@@ -102,18 +103,18 @@ const GameCover = ({ onStart, isInstallable, onInstall }: { onStart: () => void;
                 <div className="w-48 h-48 md:w-64 md:h-64 mb-8 relative">
                     <div className="absolute inset-0 bg-teal-500/20 blur-3xl rounded-full animate-pulse" />
                     <div className="w-full h-full glass-card flex items-center justify-center p-8 border-2 border-white/10 shadow-[0_0_50px_rgba(20,184,166,0.2)] rounded-[40px]">
-                        <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
-                            <path d="M50 5 L95 25 L95 75 L50 95 L5 75 L5 25 Z" fill="none" stroke="currentColor" strokeWidth="2" className="text-teal-500" />
-                            <text x="50" y="65" fontFamily="Outfit" fontSize="40" fontWeight="900" fill="white" textAnchor="middle">S26</text>
-                        </svg>
+                        <div className="flex flex-col items-center">
+                            <span className="text-teal-500 font-black italic text-8xl leading-none">SC</span>
+                            <span className="text-[10px] font-black text-white/40 tracking-[0.4em] mt-2">SIM_MGR</span>
+                        </div>
                     </div>
                 </div>
 
                 <div className="text-center space-y-2 mb-12">
                     <h1 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter text-white leading-none">
-                        SIKE'S <span className="text-teal-500">SUPER SMASH</span> 26
+                        SIMULATION <span className="text-teal-500">CRICKET</span> MANAGER
                     </h1>
-                    <p className="text-[10px] md:text-xs font-black text-white/30 uppercase tracking-[0.6em]">SEASON 1 // OFFICIAL_BROADCAST</p>
+                    <p className="text-[10px] md:text-xs font-black text-white/30 uppercase tracking-[0.6em]">V0.0.1 // STABLE_RELEASE</p>
                 </div>
 
                 <motion.button
@@ -153,6 +154,7 @@ export const App = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showSplash, setShowSplash] = useState(true);
   const [showCover, setShowCover] = useState(true);
+  const [showHelp, setShowHelp] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [feedbackMessage, setFeedbackMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [hasSaveData, setHasSaveData] = useState(false);
@@ -633,7 +635,7 @@ export const App = () => {
         );
     }
     switch(appState) {
-        case 'MAIN_MENU': return <MainMenu onStartNewGame={handleStartNewGame} onResumeGame={resumeGame} onOpenEditor={handleOpenEditor} hasSaveData={hasSaveData} />;
+        case 'MAIN_MENU': return <MainMenu onStartNewGame={handleStartNewGame} onResumeGame={resumeGame} onOpenEditor={handleOpenEditor} onShowHelp={() => setShowHelp(true)} hasSaveData={hasSaveData} />;
         case 'TEAM_SELECTION': return <TeamSelection onTeamSelected={initializeNewGame} theme={theme} />;
         case 'AUCTION': return gameData ? <AuctionRoom gameData={gameData} onAuctionComplete={handleAuctionComplete} /> : null;
         case 'CAREER_HUB': return gameData ? <CareerHub gameData={gameData} setGameData={setGameData} onResetGame={resetGame} theme={theme} setTheme={setTheme} saveGame={saveGame} loadGame={loadGame} showFeedback={showFeedback} /> : null;
@@ -713,6 +715,7 @@ export const App = () => {
     <div className="bg-slate-100 dark:bg-slate-900 min-h-screen flex items-center justify-center font-sans overflow-hidden">
       <div className="w-full h-screen md:max-w-xl md:max-h-[932px] md:h-[90vh] bg-gray-50 dark:bg-[#050808] md:border-4 md:border-gray-300 md:dark:border-gray-700 md:rounded-[60px] md:shadow-2xl md:shadow-black/50 overflow-hidden relative text-gray-900 dark:text-gray-200 flex flex-col">
         <AnimatePresence>
+          {showHelp && <HelpSection onClose={() => setShowHelp(false)} />}
           {showSplash && <SplashScreen onComplete={() => setShowSplash(false)} />}
           {!showSplash && showCover && <GameCover onStart={() => setShowCover(false)} isInstallable={isInstallable} onInstall={handleInstallClick} />}
         </AnimatePresence>

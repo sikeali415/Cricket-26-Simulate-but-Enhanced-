@@ -5,10 +5,11 @@ import { Home, Trophy, BarChart3, Settings as SettingsIcon, Newspaper, Users, Da
 import { GameData, CareerScreen, MatchResult, Player, Format, PromotionRecord, Team, LiveMatchState, NewsArticle, Ground, Standing, Match } from '../types';
 import { TEAMS, INITIAL_SPONSORSHIPS, INITIAL_NEWS } from '../data';
 import { Icons } from './Icons';
-import { getPlayerById, generateLeagueSchedule, negotiateSponsorships, generateMatchNews, generatePreMatchNews, simulateInjuries, updateAISquads, generateReplacementPlayer, resolveMatch } from '../utils';
+import { getPlayerById, generateLeagueSchedule, negotiateSponsorships, generateMatchNews, generatePreMatchNews, simulateInjuries, updateAISquads, generateReplacementPlayer, resolveMatch, randomizeT20SmashGroups } from '../utils';
 import { useSimulation } from '../hooks/useSimulation';
 import { db } from '../firebase';
 import { doc, setDoc } from 'firebase/firestore';
+import HelpSection from './HelpSection';
 
 // Components
 import Dashboard from './Dashboard';
@@ -84,6 +85,7 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
     const [forwardSimResults, setForwardSimResults] = useState<MatchResult[]>([]);
 
     const [isAutoSimulating, setIsAutoSimulating] = useState(false);
+    const [showHelp, setShowHelp] = useState(false);
 
     const { runSimulationForCurrentFormat, updateStatsFromMatch } = useSimulation(gameData, setGameData);
 
@@ -763,6 +765,9 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
 
             const initialStandings = (teams: Team[]) => teams.map(team => ({ teamId: team.id, teamName: team.name, played: 0, won: 0, lost: 0, drawn: 0, points: 0, netRunRate: 0, runsFor: 0, runsAgainst: 0, oversFor: 0, oversAgainst: 0 }));
 
+            // RANDOMIZE GROUPS FOR NEW SEASON
+            const teamsWithRandomizedGroups = randomizeT20SmashGroups(newTeams);
+
             const seasonNews: NewsArticle = { 
                 id: `s${prevData.currentSeason}-end`, 
                 headline: `Season ${prevData.currentSeason+1} Draft Room Open!`, 
@@ -778,9 +783,9 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
                 currentFormat: Format.T20_SMASH,
                 currentMatchIndex: Object.values(Format).reduce((acc, f) => ({ ...acc, [f]: 0 }), {} as Record<Format, number>),
                 matchResults: Object.values(Format).reduce((acc, f) => ({ ...acc, [f]: [] }), {} as Record<Format, MatchResult[]>),
-                standings: Object.values(Format).reduce((acc, f) => ({ ...acc, [f]: initialStandings(newTeams) }), {} as Record<Format, Standing[]>),
-                schedule: Object.values(Format).reduce((acc, f) => ({ ...acc, [f]: generateLeagueSchedule(newTeams, f) }), {} as Record<Format, Match[]>),
-                teams: newTeams,
+                standings: Object.values(Format).reduce((acc, f) => ({ ...acc, [f]: initialStandings(teamsWithRandomizedGroups) }), {} as Record<Format, Standing[]>),
+                schedule: Object.values(Format).reduce((acc, f) => ({ ...acc, [f]: generateLeagueSchedule(teamsWithRandomizedGroups, f) }), {} as Record<Format, Match[]>),
+                teams: teamsWithRandomizedGroups,
                 news: [seasonNews, ...prevData.news].slice(0, 50)
             };
         });
@@ -933,6 +938,34 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
 
     return (
         <div className="flex flex-col h-full bg-[#050808] text-[#E4E3E0] font-sans">
+            <AnimatePresence>
+                {showHelp && <HelpSection onClose={() => setShowHelp(false)} />}
+            </AnimatePresence>
+
+            <header className="px-4 py-2 bg-black/40 border-b border-white/5 flex items-center justify-between backdrop-blur-xl shrink-0 z-50">
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 md:w-10 md:h-10 bg-teal-500 rounded-lg md:rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(20,184,166,0.3)]">
+                        <span className="text-black font-black italic text-sm md:text-base">SC</span>
+                    </div>
+                    <div>
+                        <h1 className="text-[10px] md:text-sm font-black italic tracking-tighter text-white leading-none">SIMULATION CRICKET</h1>
+                        <p className="text-[6px] md:text-[8px] font-bold text-teal-500 uppercase tracking-[0.2em] mt-0.5">MANAGER_CORE_v0.0.1</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2 md:gap-4">
+                    <button 
+                        onClick={() => setShowHelp(true)}
+                        className="p-1.5 md:p-2 hover:bg-white/5 rounded-lg md:rounded-xl transition-colors text-white/40 hover:text-white"
+                    >
+                        <Icons.Help className="w-4 h-4 md:w-5 md:h-5" />
+                    </button>
+                    <div className="flex items-center gap-2 md:gap-3 bg-white/5 px-2 md:px-3 py-1 rounded-lg border border-white/10">
+                        <Icons.Wallet className="w-3 h-3 md:w-4 md:h-4 text-teal-500" />
+                        <span className="text-[10px] md:text-xs font-black italic tracking-tighter">${userTeam?.purse.toFixed(2)}Cr</span>
+                    </div>
+                </div>
+            </header>
+
             <main className="flex-grow overflow-hidden relative">
                 <AnimatePresence mode="wait">
                     <motion.div

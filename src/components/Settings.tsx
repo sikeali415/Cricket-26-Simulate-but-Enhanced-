@@ -104,8 +104,8 @@ const Settings: React.FC<SettingsProps> = ({ onResetGame, theme, setTheme, saveG
 
                 {/* About */}
                 <div className="p-6 text-center">
-                    <div className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-[0.4em] mb-2">Sikes Cricket Manager</div>
-                    <div className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Version 26.1.0 (PRO)</div>
+                    <div className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-[0.4em] mb-2">Simulation Cricket Manager</div>
+                    <div className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Version 0.0.1</div>
                 </div>
             </div>
         </div>
