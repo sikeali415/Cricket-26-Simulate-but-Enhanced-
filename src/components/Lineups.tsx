@@ -273,20 +273,24 @@ const Lineups: React.FC<LineupsProps> = ({
                                             <div className="space-y-1">
                                                 <div className="flex items-center justify-between">
                                                     <p className="text-[6px] font-black text-white/20 uppercase tracking-widest">BATTING</p>
-                                                    <span className="text-[6px] font-bold text-white/40">{player.stats[currentFormat]?.matches || 0}M</span>
+                                                    <span className="text-[6px] font-bold text-white/40">{player.stats[currentFormat]?.matches || 0}M | {player.stats[currentFormat]?.hundreds || 0}x100 {player.stats[currentFormat]?.fifties || 0}x50</span>
                                                 </div>
-                                                <div className="grid grid-cols-3 gap-2">
+                                                <div className="grid grid-cols-4 gap-2">
                                                     <div className="flex flex-col">
                                                         <span className="text-[10px] font-black text-teal-500 leading-none">{player.stats[currentFormat]?.runs || 0}</span>
                                                         <span className="text-[5px] text-white/30 font-bold uppercase">RUNS</span>
                                                     </div>
                                                     <div className="flex flex-col text-center">
-                                                        <span className="text-[10px] font-black text-teal-300 leading-none">{player.stats[currentFormat]?.runsByPosition?.[index + 1] || 0}</span>
-                                                        <span className="text-[4px] text-teal-500/60 font-black uppercase">AT #{index + 1}</span>
-                                                    </div>
-                                                    <div className="flex flex-col text-right">
                                                         <span className="text-[10px] font-black text-white leading-none">{(player.stats[currentFormat]?.average || 0).toFixed(1)}</span>
                                                         <span className="text-[5px] text-white/30 font-bold uppercase">AVG</span>
+                                                    </div>
+                                                    <div className="flex flex-col text-center">
+                                                        <span className="text-[10px] font-black text-white leading-none">{(player.stats[currentFormat]?.strikeRate || 0).toFixed(1)}</span>
+                                                        <span className="text-[5px] text-white/30 font-bold uppercase">SR</span>
+                                                    </div>
+                                                    <div className="flex flex-col text-right">
+                                                        <span className="text-[10px] font-black text-teal-300 leading-none">{player.stats[currentFormat]?.runsByPosition?.[index + 1] || 0}</span>
+                                                        <span className="text-[4px] text-teal-500/60 font-black uppercase">AT #{index + 1}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -295,14 +299,18 @@ const Lineups: React.FC<LineupsProps> = ({
                                                     <p className="text-[6px] font-black text-white/20 uppercase tracking-widest">BOWLING</p>
                                                     <span className="text-[6px] font-bold text-white/40">{player.stats[currentFormat]?.strikeRate ? player.stats[currentFormat]?.strikeRate.toFixed(1) : '0.0'} <span className="text-[5px]">SR</span></span>
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-2">
+                                                <div className="grid grid-cols-3 gap-2">
                                                     <div className="flex flex-col">
                                                         <span className="text-[10px] font-black text-blue-400 leading-none">{player.stats[currentFormat]?.wickets || 0}</span>
                                                         <span className="text-[5px] text-white/30 font-bold uppercase">WKTS</span>
                                                     </div>
-                                                    <div className="flex flex-col text-right">
+                                                    <div className="flex flex-col text-center">
                                                         <span className="text-[10px] font-black text-white leading-none">{(player.stats[currentFormat]?.economy || 0).toFixed(1)}</span>
                                                         <span className="text-[5px] text-white/30 font-bold uppercase">ECO</span>
+                                                    </div>
+                                                    <div className="flex flex-col text-right">
+                                                        <span className="text-[10px] font-black text-white leading-none">{(player.stats[currentFormat]?.bowlingAverage || 0).toFixed(1)}</span>
+                                                        <span className="text-[5px] text-white/30 font-bold uppercase">AVG</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -400,7 +408,7 @@ const Lineups: React.FC<LineupsProps> = ({
                                         <div className="space-y-1">
                                             <div className="flex items-center justify-between">
                                                 <p className="text-[6px] font-black text-white/20 uppercase tracking-widest">BATTING</p>
-                                                <span className="text-[6px] font-bold text-white/40">{player.stats[currentFormat]?.matches || 0}M</span>
+                                                <span className="text-[6px] font-bold text-white/40">{player.stats[currentFormat]?.matches || 0}M | SR: {(player.stats[currentFormat]?.strikeRate || 0).toFixed(1)}</span>
                                             </div>
                                             <div className="grid grid-cols-2 gap-2">
                                                 <div className="flex flex-col">
@@ -416,7 +424,7 @@ const Lineups: React.FC<LineupsProps> = ({
                                         <div className="space-y-1 border-l border-white/5 pl-3">
                                             <div className="flex items-center justify-between">
                                                 <p className="text-[6px] font-black text-white/20 uppercase tracking-widest">BOWLING</p>
-                                                <span className="text-[6px] font-bold text-white/40">{player.stats[currentFormat]?.strikeRate ? player.stats[currentFormat]?.strikeRate.toFixed(1) : '0.0'} <span className="text-[5px]">SR</span></span>
+                                                <span className="text-[6px] font-bold text-white/40">{(player.stats[currentFormat]?.bowlingAverage || 0).toFixed(1)} <span className="text-[5px]">AVG</span></span>
                                             </div>
                                             <div className="grid grid-cols-2 gap-2">
                                                 <div className="flex flex-col">

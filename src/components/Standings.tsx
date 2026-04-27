@@ -26,17 +26,17 @@ const Standings: React.FC<StandingsProps> = ({ gameData, onViewScorecard, onView
 
     const groupAStandings = sortedStandings.filter(s => {
         const team = gameData.teams.find(t => t.id === s.teamId);
-        return !isT20Smash && team?.group === 'A';
+        return team?.initialGroup === 'A' || (team?.group as string) === 'Group A';
     });
     const groupBStandings = sortedStandings.filter(s => {
         const team = gameData.teams.find(t => t.id === s.teamId);
-        return !isT20Smash && team?.group === 'B';
+        return team?.initialGroup === 'B' || (team?.group as string) === 'Group B';
     });
     const superSixStandings = sortedStandings.filter(s => {
         const team = gameData.teams.find(t => t.id === s.teamId);
-        return !isT20Smash && team?.group === 'Super Six';
+        return (team?.group as string) === 'Super Sixes' || (team?.group as string) === 'Super Six';
     });
-    const roundRobinStandings = isT20Smash ? sortedStandings : sortedStandings.filter(s => {
+    const roundRobinStandings = isT20Smash ? [] : sortedStandings.filter(s => {
         const team = gameData.teams.find(t => t.id === s.teamId);
         return !team?.group || team.group === 'Round-Robin';
     });

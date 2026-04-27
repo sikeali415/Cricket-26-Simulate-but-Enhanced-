@@ -164,31 +164,126 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
     const checkT20SmashTransitions = useCallback((data: GameData): GameData => {
         if (data.currentFormat !== Format.T20_SMASH) return data;
         const currentIndex = data.currentMatchIndex[Format.T20_SMASH];
+        const schedule = data.schedule[Format.T20_SMASH] || [];
 
-        // Transition: League Stage (80 matches) -> Semi-Finals News
-        if (currentIndex === 80) {
-            const newsId = `knockouts-start-${data.currentSeason}`;
-            const hasStartedKnockouts = data.news?.some(n => n.id === newsId);
-            if (!hasStartedKnockouts) {
+        // 1. Initial Group Assignment (Self-Correction for existing saves)
+        const needsGroupAssignment = data.teams.some(t => !t.initialGroup);
+        if (needsGroupAssignment && currentIndex < 56) {
+             const teamNamesOrder = [
+                'KNIGHTS', 'FALCONS', 'KINGS', 'RIDERS', 'CHARGERS', 'HAWKS', 'WARRIORS', 'EAGLES',
+                'PANTHERS', 'GLADIATORS', 'STARS', 'STRIKERS', 'TITANS', 'SIXERS', 'ROYALS', 'BLAZERS'
+            ];
+            const updatedTeams = data.teams.map(t => {
+                const idx = teamNamesOrder.indexOf(t.name.toUpperCase());
+                if (idx !== -1) {
+                    return { ...t, initialGroup: (idx < 8 ? 'A' : 'B') as any };
+                }
+                return t;
+            });
+            return { ...data, teams: updatedTeams };
+        }
+
+        // 2. Transition: Group Stage (56 matches) -> Super Sixes
+        // If we are at 56 or more, but Super Sixes fixtures haven't been resolved from placeholders
+        if (currentIndex >= 56 && currentIndex < 71) {
+            const nextMatch = schedule[currentIndex];
+            if (nextMatch && nextMatch.teamA === 'TBD') {
                 const standings = data.standings[Format.T20_SMASH] || [];
-                const rrStandings = standings.sort((a, b) => {
-                    if (b.points !== a.points) return b.points - a.points;
-                    if (b.netRunRate !== a.netRunRate) return b.netRunRate - a.netRunRate;
-                    return b.won - a.won;
-                });
+                const teams = data.teams;
 
-                const top4 = rrStandings.slice(0, 4);
-
-                const knockoutsNews: NewsArticle = {
-                    id: newsId,
-                    headline: "The T20 Smash Final Four are Decided!",
-                    date: new Date().toLocaleDateString(),
-                    excerpt: "Knockout stage begins now.",
-                    content: `The 80-match league battle has concluded. The semi-finalists are: ${top4.map(s => s.teamName).join(', ')}. It's win or go home from here!`,
-                    type: 'league'
+                const getTop3 = (groupName: string) => {
+                    return standings
+                        .filter(s => {
+                            const team = teams.find(t => t.id === s.teamId);
+                            return team?.initialGroup === groupName;
+                        })
+                        .sort((a,b) => b.points - a.points || b.netRunRate - a.netRunRate)
+                        .slice(0, 3);
                 };
 
-                return { ...data, news: [knockoutsNews, ...(data.news || [])].slice(0, 50) };
+                const topA = getTop3('A');
+                const topB = getTop3('B');
+                
+                if (topA.length === 3 && topB.length === 3) {
+                    const ssTeams = [...topA, ...topB].map(s => teams.find(t => t.id === s.teamId)!);
+
+                    // Update team groups
+                    const updatedTeams = teams.map(t => {
+                        if (ssTeams.find(ss => ss.id === t.id)) {
+                            return { ...t, group: 'Super Sixes' as any };
+                        }
+                        return t;
+                    });
+
+                    // Generate SS Fixtures
+                    const ssMatches: Match[] = [];
+                    for (let i = 0; i < ssTeams.length; i++) {
+                        for (let j = i + 1; j < ssTeams.length; j++) {
+                            ssMatches.push({
+                                matchNumber: `SS${ssMatches.length + 1}`,
+                                teamA: ssTeams[i].name,
+                                teamAId: ssTeams[i].id,
+                                vs: 'vs',
+                                teamB: ssTeams[j].name,
+                                teamBId: ssTeams[j].id,
+                                date: `Super Sixes - Rd ${ssMatches.length + 1}`,
+                                group: 'Super Sixes' as any
+                            });
+                        }
+                    }
+
+                    const newSchedule = [...schedule];
+                    ssMatches.forEach((m, i) => {
+                        newSchedule[56 + i] = m;
+                    });
+
+                    const ssNews: NewsArticle = {
+                        id: `super-sixes-${data.currentSeason}`,
+                        headline: "Super Sixes Stage Activated!",
+                        date: new Date().toLocaleDateString(),
+                        excerpt: "The battle for supremacy continues.",
+                        content: `The Super Sixes are: ${ssTeams.map(t => t.name).join(', ')}.`,
+                        type: 'league'
+                    };
+
+                    return { 
+                        ...data, 
+                        teams: updatedTeams,
+                        schedule: { ...data.schedule, [Format.T20_SMASH]: newSchedule },
+                        news: [ssNews, ...(data.news || [])].slice(0, 50) 
+                    };
+                }
+            }
+        }
+
+        // 3. Transition: Super Sixes -> Knockouts Transition
+        if (currentIndex >= 71 && currentIndex < 74) {
+            const nextMatch = schedule[currentIndex];
+            if (nextMatch && (nextMatch.teamA === '1st SS' || nextMatch.teamAId === undefined)) {
+                // ... news logic etc handled in resolveMatch more dynamically, but we can add news here
+                const newsId = `knockouts-start-${data.currentSeason}`;
+                if (!data.news?.some(n => n.id === newsId)) {
+                     const standings = data.standings[Format.T20_SMASH] || [];
+                     const ssStandings = standings
+                        .filter(s => {
+                            const team = data.teams.find(t => t.id === s.teamId);
+                            return team?.group === 'Super Sixes';
+                        })
+                        .sort((a,b) => b.points - a.points || b.netRunRate - a.netRunRate);
+
+                    const top4 = ssStandings.slice(0, 4);
+                    if (top4.length === 4) {
+                         const knockoutsNews: NewsArticle = {
+                            id: newsId,
+                            headline: "T20 Smash: The Final Four!",
+                            date: new Date().toLocaleDateString(),
+                            excerpt: "Semi-final match-ups confirmed.",
+                            content: `Road to the trophy: ${top4.map(s => s.teamName).join(', ')}.`,
+                            type: 'league'
+                        };
+                        return { ...data, news: [knockoutsNews, ...(data.news || [])].slice(0, 50) };
+                    }
+                }
             }
         }
         return data;
@@ -382,6 +477,7 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
             }
             results.push(result);
             simulatedCount++;
+            matchIndex++;
             
             if (matchToSim.group !== 'Round-Robin' || Math.random() < 0.3) {
                 const sponsorship = currentData.sponsorships?.[currentData.currentFormat] || INITIAL_SPONSORSHIPS[currentData.currentFormat];

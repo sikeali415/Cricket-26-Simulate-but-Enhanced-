@@ -559,16 +559,30 @@ export const useSimulation = (gameData: GameData, setGameData: React.Dispatch<Re
     }, [runLimitedOversMatchSimulation, runFirstClassMatchSimulation]);
 
     const updateStatsFromMatch = useCallback((result: MatchResult, format: Format, gameData: GameData): GameData => {
-        const newGameData = JSON.parse(JSON.stringify(gameData)) as GameData;
+        const newGameData: GameData = { 
+            ...gameData,
+            allPlayers: [...gameData.allPlayers],
+            standings: {
+                ...gameData.standings,
+                [format]: [...(gameData.standings[format] || [])]
+            },
+            matchResults: {
+                ...gameData.matchResults,
+                [format]: [...(gameData.matchResults[format] || [])]
+            }
+        };
         const allInnings = [result.firstInning, result.secondInning, result.thirdInning, result.fourthInning].filter(Boolean) as Inning[];
 
         for (const inning of allInnings) {
             for (const batPerf of inning.batting) { 
-                const player = newGameData.allPlayers.find(p => p.id === batPerf.playerId); 
-                if (!player) continue; 
+                const playerIdx = newGameData.allPlayers.findIndex(p => p.id === batPerf.playerId); 
+                if (playerIdx === -1) continue; 
+                
+                const player = { ...newGameData.allPlayers[playerIdx] };
                 if (!player.stats) player.stats = {} as Record<Format, PlayerStats>; 
                 if (!player.stats[format]) player.stats[format] = generateSingleFormatInitialStats();
-                const stats = player.stats[format]; 
+                
+                const stats = { ...player.stats[format] }; 
                 stats.matches += (inning === result.firstInning || inning === result.secondInning ? 1 : 0); 
                 stats.runs += batPerf.runs; 
                 stats.ballsFaced += batPerf.balls; 
@@ -595,9 +609,10 @@ export const useSimulation = (gameData: GameData, setGameData: React.Dispatch<Re
                 if (!stats.runsByPosition) {
                     stats.runsByPosition = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0 };
                 }
-                stats.runsByPosition[batPerf.battingOrder] = (stats.runsByPosition[batPerf.battingOrder] || 0) + batPerf.runs;
+                const rbPos = { ...stats.runsByPosition };
+                rbPos[batPerf.battingOrder] = (rbPos[batPerf.battingOrder] || 0) + batPerf.runs;
+                stats.runsByPosition = rbPos;
                 
-                // Enhanced phase stats accumulation
                 stats.ppRuns += batPerf.ppRuns || 0;
                 stats.ppBalls += batPerf.ppBalls || 0;
                 stats.midRuns += batPerf.midRuns || 0;
@@ -607,19 +622,24 @@ export const useSimulation = (gameData: GameData, setGameData: React.Dispatch<Re
 
                 stats.average = stats.dismissals > 0 ? stats.runs / stats.dismissals : stats.runs; 
                 stats.strikeRate = stats.ballsFaced > 0 ? (stats.runs / stats.ballsFaced) * 100 : 0; 
+                
+                player.stats = { ...player.stats, [format]: stats };
+                newGameData.allPlayers[playerIdx] = player;
             }
 
             for (const bowlPerf of inning.bowling) { 
-                const player = newGameData.allPlayers.find(p => p.id === bowlPerf.playerId); 
-                if (!player) continue; 
+                const playerIdx = newGameData.allPlayers.findIndex(p => p.id === bowlPerf.playerId); 
+                if (playerIdx === -1) continue; 
+                
+                const player = { ...newGameData.allPlayers[playerIdx] };
                 if (!player.stats) player.stats = {} as Record<Format, PlayerStats>; 
                 if (!player.stats[format]) player.stats[format] = generateSingleFormatInitialStats();
-                const stats = player.stats[format]; 
+                
+                const stats = { ...player.stats[format] }; 
                 stats.wickets += bowlPerf.wickets; 
                 stats.runsConceded += bowlPerf.runsConceded; 
                 stats.ballsBowled += bowlPerf.ballsBowled;
 
-                // Enhanced phase stats accumulation
                 stats.ppRunsConceded += bowlPerf.ppRuns || 0;
                 stats.ppBallsBowled += bowlPerf.ppBalls || 0;
                 stats.ppWickets += bowlPerf.ppWickets || 0;
@@ -642,91 +662,96 @@ export const useSimulation = (gameData: GameData, setGameData: React.Dispatch<Re
                 if (bowlPerf.wickets >= 5) stats.fiveWicketHauls++; 
                 else if (bowlPerf.wickets >= 3) stats.threeWicketHauls++; 
 
-                // Track recent performance
                 if (!player.recentPerformances) player.recentPerformances = [];
-                const existingPerf = player.recentPerformances.find(rp => rp.matchId === result.matchNumber.toString());
-                if (existingPerf) {
-                    existingPerf.wickets = bowlPerf.wickets;
+                const rpIdx = player.recentPerformances.findIndex(rp => rp.matchId === result.matchNumber.toString());
+                const newRecentPerfs = [...player.recentPerformances];
+                if (rpIdx !== -1) {
+                    newRecentPerfs[rpIdx] = { ...newRecentPerfs[rpIdx], wickets: bowlPerf.wickets };
                 } else {
-                    player.recentPerformances.push({ matchId: result.matchNumber.toString(), runs: 0, wickets: bowlPerf.wickets });
+                    newRecentPerfs.push({ matchId: result.matchNumber.toString(), runs: 0, wickets: bowlPerf.wickets });
                 }
-                if (player.recentPerformances.length > 10) player.recentPerformances.shift();
+                player.recentPerformances = newRecentPerfs.slice(-10);
+                
+                player.stats = { ...player.stats, [format]: stats };
+                newGameData.allPlayers[playerIdx] = player;
             }
         }
 
-        // Ensure batting perfs are also in recentPerformances
-        for (const inning of allInnings) {
+        // Additional update for recent batting performances
+        const inningsWithBatting = allInnings;
+        for (const inning of inningsWithBatting) {
             for (const batPerf of inning.batting) {
-                const player = newGameData.allPlayers.find(p => p.id === batPerf.playerId);
-                if (!player) continue;
+                const playerIdx = newGameData.allPlayers.findIndex(p => p.id === batPerf.playerId);
+                if (playerIdx === -1) continue;
+                
+                const player = { ...newGameData.allPlayers[playerIdx] };
                 if (!player.recentPerformances) player.recentPerformances = [];
-                const existingPerf = player.recentPerformances.find(rp => rp.matchId === result.matchNumber.toString());
-                if (existingPerf) {
-                    existingPerf.runs = batPerf.runs;
+                const rpIdx = player.recentPerformances.findIndex(rp => rp.matchId === result.matchNumber.toString());
+                const newRecentPerfs = [...player.recentPerformances];
+                if (rpIdx !== -1) {
+                    newRecentPerfs[rpIdx] = { ...newRecentPerfs[rpIdx], runs: batPerf.runs };
                 } else {
-                    player.recentPerformances.push({ matchId: result.matchNumber.toString(), runs: batPerf.runs, wickets: 0 });
+                    newRecentPerfs.push({ matchId: result.matchNumber.toString(), runs: batPerf.runs, wickets: 0 });
                 }
-                if (player.recentPerformances.length > 10) player.recentPerformances.shift();
+                player.recentPerformances = newRecentPerfs.slice(-10);
+                newGameData.allPlayers[playerIdx] = player;
             }
         }
 
-        const motmPlayer = newGameData.allPlayers.find(p => p.id === result.manOfTheMatch.playerId); 
-        if (motmPlayer) { 
-             if (!motmPlayer.stats) motmPlayer.stats = {} as Record<Format, PlayerStats>; 
-             if (!motmPlayer.stats[format]) motmPlayer.stats[format] = generateSingleFormatInitialStats();
-            motmPlayer.stats[format].manOfTheMatchAwards++; 
+        const motmPlayerIdx = newGameData.allPlayers.findIndex(p => p.id === result.manOfTheMatch.playerId); 
+        if (motmPlayerIdx !== -1) { 
+            const p = { ...newGameData.allPlayers[motmPlayerIdx] };
+            if (!p.stats) p.stats = {} as Record<Format, PlayerStats>; 
+            if (!p.stats[format]) p.stats[format] = generateSingleFormatInitialStats();
+            const stats = { ...p.stats[format] };
+            stats.manOfTheMatchAwards++; 
+            p.stats = { ...p.stats, [format]: stats };
+            newGameData.allPlayers[motmPlayerIdx] = p;
         }
 
-        newGameData.standings[format].forEach((s: Standing) => {
-            const teamData = newGameData.allTeamsData.find(t => t.id === s.teamId);
-            if (teamData) {
-                s.logo = teamData.logo;
-                if (format === Format.T20_SMASH) s.rating = teamData.ratings?.t20 || 0;
-                else if (format === Format.ODI) s.rating = teamData.ratings?.odi || 0;
-                else if (format === Format.SHIELD) s.rating = teamData.ratings?.fc || 0;
-            }
-
-            const oversToDecimal = (overs: string) => {
-                const [ov, balls] = overs.split('.').map(Number);
-                return ov + (balls || 0) / 6;
-            };
-
+        newGameData.standings[format] = newGameData.standings[format].map((s: Standing) => {
             const isTeamA = s.teamId === result.firstInning.teamId;
             const isTeamB = s.teamId === result.secondInning?.teamId;
 
             if (isTeamA || isTeamB) {
-                s.played++;
+                const newS = { ...s };
+                newS.played++;
                 
                 const myInning = isTeamA ? result.firstInning : result.secondInning;
                 const oppInning = isTeamA ? result.secondInning : result.firstInning;
                 
                 if (myInning && oppInning) {
-                    s.runsFor += myInning.score;
-                    s.runsAgainst += oppInning.score;
+                    newS.runsFor += myInning.score;
+                    newS.runsAgainst += oppInning.score;
 
-                    // If team is all out, they are considered to have faced full quota (20 for T20, 50 for ODI)
                     const maxOvers = format.includes('T20') ? 20 : 50;
+                    const oversToDecimal = (overs: string) => {
+                        const [ov, b] = overs.split('.').map(Number);
+                        return ov + (b || 0) / 6;
+                    };
                     const oversFaced = (myInning.wickets === 10) ? maxOvers : oversToDecimal(myInning.overs);
                     const oversBowled = (oppInning.wickets === 10) ? maxOvers : oversToDecimal(oppInning.overs);
 
-                    s.oversFor += oversFaced;
-                    s.oversAgainst += oversBowled;
+                    newS.oversFor += oversFaced;
+                    newS.oversAgainst += oversBowled;
 
-                    if (s.oversFor > 0 && s.oversAgainst > 0) {
-                        s.netRunRate = (s.runsFor / s.oversFor) - (s.runsAgainst / s.oversAgainst);
+                    if (newS.oversFor > 0 && newS.oversAgainst > 0) {
+                        newS.netRunRate = (newS.runsFor / newS.oversFor) - (newS.runsAgainst / newS.oversAgainst);
                     }
                 }
 
                 if (result.winnerId === s.teamId) {
-                    s.won++;
-                    s.points += format.includes('First-Class') ? 4 : 2;
+                    newS.won++;
+                    newS.points += format.includes('First-Class') ? 4 : 2;
                 }
                 else if (!result.winnerId) {
-                    s.drawn++;
-                    s.points += 1;
+                    newS.drawn++;
+                    newS.points += 1;
                 }
-                else s.lost++;
+                else newS.lost++;
+                return newS;
             }
+            return s;
         });
 
         newGameData.standings[format].sort((a, b) => b.points - a.points || b.netRunRate - a.netRunRate); 

@@ -113,7 +113,7 @@ export interface Team {
     mentality?: number;
     color?: string;
     overallRating?: number;
-    group?: 'A' | 'B' | 'Round-Robin' | 'Super Six' | 'Eliminated';
+    group?: 'A' | 'B' | 'Round-Robin' | 'Super Sixes' | 'Super Six' | 'Group A' | 'Group B' | 'Eliminated';
     initialGroup?: 'A' | 'B';
     ratings?: {
         t20: number;
@@ -125,7 +125,7 @@ export interface Team {
 export interface TeamData {
     id: string; name: string; homeGround: string; logo: string; isYouthTeam: boolean;
     overallRating?: number;
-    group?: 'A' | 'B' | 'Round-Robin' | 'Super Six' | 'Eliminated';
+    group?: 'A' | 'B' | 'Round-Robin' | 'Super Sixes' | 'Super Six' | 'Group A' | 'Group B' | 'Eliminated';
     initialGroup?: 'A' | 'B';
     ratings?: {
         t20: number;
@@ -140,7 +140,7 @@ export interface Ground {
 }
 
 export interface Match {
-    matchNumber: number | string; teamA: string; teamAId?: string; vs: string; teamB: string; teamBId?: string; date: string; group: 'Group A' | 'Group B' | 'Round-Robin' | 'Super Six' | 'Semi-Finals' | 'Final';
+    matchNumber: number | string; teamA: string; teamAId?: string; vs: string; teamB: string; teamBId?: string; date: string; group: 'Group A' | 'Group B' | 'Round-Robin' | 'Super Sixes' | 'Super Six' | 'Semi-Finals' | 'Final';
 }
 
 export interface Inning {

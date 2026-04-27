@@ -402,8 +402,9 @@ const LiveMatchScreen: React.FC<LiveMatchScreenProps> = ({ match, gameData, onMa
     const [showMatchCentre, setShowMatchCentre] = useState(false);
     const [showBattingOrderEditor, setShowBattingOrderEditor] = useState(false);
     const [showCaptainsCorner, setShowCaptainsCorner] = useState(false);
-    const [activeTab, setActiveTab] = useState<'scorecard' | 'commentary' | 'analysis'>('scorecard');
+    const [activeTab, setActiveTab] = useState<'scorecard' | 'commentary' | 'analysis' | 'stats'>('scorecard');
     const [scorecardSort, setScorecardSort] = useState<'order' | 'runs'>('order');
+    const [statsSearchQuery, setStatsSearchQuery] = useState('');
     
     const [selectedOpener1, setSelectedOpener1] = useState('');
     const [selectedOpener2, setSelectedOpener2] = useState('');
@@ -1040,7 +1041,7 @@ const LiveMatchScreen: React.FC<LiveMatchScreenProps> = ({ match, gameData, onMa
             </div>
             
             <div className="flex bg-white/[0.03] rounded-2xl p-1 mb-6 border border-white/5">
-                {['scorecard', 'commentary', 'analysis'].map(tab => (
+                {['scorecard', 'commentary', 'analysis', 'stats'].map(tab => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab as any)}
@@ -1052,6 +1053,59 @@ const LiveMatchScreen: React.FC<LiveMatchScreenProps> = ({ match, gameData, onMa
             </div>
 
             <div className="flex-1 overflow-y-auto pr-1 scrollbar-hide">
+                {activeTab === 'stats' && (
+                    <div className="space-y-4">
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder="SEARCH PLAYER..."
+                                value={statsSearchQuery}
+                                onChange={(e) => setStatsSearchQuery(e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white placeholder:text-white/20 focus:outline-none focus:border-teal-500/50 transition-all"
+                            />
+                            <Icons.Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+                        </div>
+
+                        <div className="space-y-2">
+                             <h4 className="text-[8px] font-black text-teal-500 uppercase tracking-widest px-1">MATCH_SQUAD_STATS</h4>
+                             {gameData.allPlayers
+                                .filter(p => {
+                                    const inMatch = battingTeam.squad.some(s => s.id === p.id) || bowlingTeam.squad.some(s => s.id === p.id);
+                                    if (!inMatch) return false;
+                                    if (statsSearchQuery) return p.name.toLowerCase().includes(statsSearchQuery.toLowerCase());
+                                    return true;
+                                })
+                                .sort((a, b) => b.battingSkill - a.battingSkill)
+                                .map(p => {
+                                    const stats = p.stats[gameData.currentFormat];
+                                    return (
+                                        <div key={p.id} className="bg-white/[0.02] border border-white/5 p-3 rounded-2xl flex items-center justify-between group hover:bg-white/5 transition-all">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-black/40 border border-white/10 overflow-hidden">
+                                                    <PlayerAvatar player={p} size="sm" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase italic text-white leading-tight">{p.name}</p>
+                                                    <p className="text-[7px] font-black text-white/30 uppercase tracking-widest">{p.role}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <div className="text-right">
+                                                    <p className="text-[6px] text-white/20 uppercase font-black">Batting</p>
+                                                    <p className="text-[10px] font-black text-teal-500">{stats?.runs || 0}r @ {stats?.average.toFixed(1) || '0.0'}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-[6px] text-white/20 uppercase font-black">Bowling</p>
+                                                    <p className="text-[10px] font-black text-blue-500">{stats?.wickets || 0}w @ {stats?.economy.toFixed(1) || '0.0'}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                             }
+                        </div>
+                    </div>
+                )}
                 {activeTab === 'scorecard' && (
                     <div className="space-y-3">
                         <div className="bg-white/[0.02] rounded-xl p-2.5 border border-white/5">

@@ -278,27 +278,26 @@ export const generateAutoXI = (squad: Player[], format: Format) => {
     const keeper = [...squad].sort((a,b) => b.battingSkill - a.battingSkill).find(p => p.role === PlayerRole.WICKET_KEEPER);
     if (keeper) add(keeper);
 
-    // 2. Openers
+    // 2. Openers - Strictly top 2 slots if available
     const openers = squad.filter(p => p.isOpener && !used.has(p.id)).sort((a,b) => b.battingSkill - a.battingSkill).slice(0, 2);
     openers.forEach(add);
 
-    // 3. Best 4 Batters/All-rounders (to get to 7 total including openers and keeper)
+    // 3. Best 4 remaining Batters/All-rounders (to get to 7 total including openers and keeper)
     const midOrder = squad.filter(p => !used.has(p.id) && [PlayerRole.BATSMAN, PlayerRole.ALL_ROUNDER].includes(p.role))
         .sort((a,b) => b.battingSkill - a.battingSkill)
         .slice(0, 7 - xi.length);
     midOrder.forEach(add);
 
-    // 4. Best 4 Bowlers (combo)
+    // 4. Best 4 Bowlers (combo: at least 1 spin, 1 fast)
     const pBowlers = squad.filter(p => !used.has(p.id) && [PlayerRole.FAST_BOWLER, PlayerRole.SPIN_BOWLER].includes(p.role))
         .sort((a,b) => b.secondarySkill - a.secondarySkill);
     
-    // Ensure at least 1 spin, 1 fast if possible
     const spin = pBowlers.find(p => p.role === PlayerRole.SPIN_BOWLER);
-    const fast = pBowlers.find(p => p.role === PlayerRole.FAST_BOWLER);
     if (spin) add(spin);
+    const fast = pBowlers.find(p => p.role === PlayerRole.FAST_BOWLER);
     if (fast) add(fast);
     
-    // Remaining bowlers to fill 4 slots
+    // Remaining bowlers to fill 4 slots (Total 11)
     const remBowlers = squad.filter(p => !used.has(p.id) && [PlayerRole.FAST_BOWLER, PlayerRole.SPIN_BOWLER, PlayerRole.ALL_ROUNDER].includes(p.role))
         .sort((a,b) => b.secondarySkill - a.secondarySkill);
     remBowlers.forEach(p => { if (xi.length < 11) add(p); });
@@ -307,12 +306,19 @@ export const generateAutoXI = (squad: Player[], format: Format) => {
     squad.filter(p => !used.has(p.id)).sort((a,b) => Math.max(a.battingSkill, a.secondarySkill) - Math.max(b.battingSkill, b.secondarySkill))
         .forEach(p => { if (xi.length < 11) add(p); });
 
-    // Order: Opening pair, then rest by batting skill
+    // Order: 1&2 are Openers, 3-7 are Batters/All-rounders, 8-11 are Bowlers
+    // We already biased the selection. Now we sort them strictly by role/skill for the order.
     const finalXi = [...xi];
     const finalOpeners = finalXi.filter(p => p.isOpener).slice(0, 2);
-    const rest = finalXi.filter(p => !finalOpeners.includes(p));
+    const remainingInXi = finalXi.filter(p => !finalOpeners.includes(p));
     
-    return [...finalOpeners, ...rest].slice(0, 11);
+    const battingPower = remainingInXi.filter(p => [PlayerRole.BATSMAN, PlayerRole.WICKET_KEEPER, PlayerRole.ALL_ROUNDER].includes(p.role))
+        .sort((a, b) => b.battingSkill - a.battingSkill);
+    const battingIds = new Set(battingPower.map(p => p.id));
+    const bowlersPower = remainingInXi.filter(p => !battingIds.has(p.id))
+        .sort((a, b) => b.secondarySkill - a.secondarySkill);
+
+    return [...finalOpeners, ...battingPower, ...bowlersPower].slice(0, 11);
 };
 
 export const getBatterTier = (battingSkill: number) => {
@@ -392,6 +398,11 @@ export const resolveMatch = (match: Match, gameData: GameData, format: Format): 
         if (placeholder === '1st B') return getTeamFromStanding(1, 'Group B');
         if (placeholder === '2nd B') return getTeamFromStanding(2, 'Group B');
         if (placeholder === '3rd B') return getTeamFromStanding(3, 'Group B');
+
+        if (placeholder === '1st SS') return getTeamFromStanding(1, 'Super Sixes');
+        if (placeholder === '2nd SS') return getTeamFromStanding(2, 'Super Sixes');
+        if (placeholder === '3rd SS') return getTeamFromStanding(3, 'Super Sixes');
+        if (placeholder === '4th SS') return getTeamFromStanding(4, 'Super Sixes');
 
         if (placeholder === '1st') return getTeamFromStanding(1, 'Round-Robin');
         if (placeholder === '2nd') return getTeamFromStanding(2, 'Round-Robin');
@@ -517,40 +528,59 @@ export const generateLeagueSchedule = (teams: Team[], format: Format, doubleRoun
     if (teams.length < 2) return [];
 
     if (format === Format.T20_SMASH) {
-        // T20 Smash Spec: 16 teams, 80 cyclic fixtures (10 matches each), top 4 knockouts
+        // T20 Smash Spec: 2 Groups of 8 teams -> Super Sixes -> Knockouts
         const teamNamesOrder = [
             'KNIGHTS', 'FALCONS', 'KINGS', 'RIDERS', 'CHARGERS', 'HAWKS', 'WARRIORS', 'EAGLES',
             'PANTHERS', 'GLADIATORS', 'STARS', 'STRIKERS', 'TITANS', 'SIXERS', 'ROYALS', 'BLAZERS'
         ];
 
-        // Map teams by their uppercase name to find correct IDs
         const teamMap = new Map<string, Team>();
         teams.forEach(t => teamMap.set(t.name.toUpperCase(), t));
 
-        const orderedTeams = teamNamesOrder.map(name => teamMap.get(name) || teams.find(t => t.name.toUpperCase() === name) || teams[0]);
+        const orderedTeams = teamNamesOrder.map(name => {
+            return teamMap.get(name) || teams.find(t => t.name.toUpperCase() === name) || teams[0];
+        });
 
-        // Generate 5 sets of 16 matches each (cyclic)
-        for (let step = 1; step <= 5; step++) {
-            for (let i = 0; i < 16; i++) {
-                const teamA = orderedTeams[i];
-                const teamB = orderedTeams[(i + step) % 16];
-                
-                matches.push({
-                    matchNumber: matches.length + 1,
-                    teamA: teamA.name,
-                    teamAId: teamA.id,
-                    vs: 'vs',
-                    teamB: teamB.name,
-                    teamBId: teamB.id,
-                    date: `Set ${step} - Round ${i + 1}`,
-                    group: 'Round-Robin' as any
-                });
+        const grA = orderedTeams.slice(0, 8);
+        const grB = orderedTeams.slice(8, 16);
+
+        // 1. Group Stage (56 matches)
+        const generateGroup = (gTeams: Team[], gName: string) => {
+            for (let i = 0; i < gTeams.length; i++) {
+                for (let j = i + 1; j < gTeams.length; j++) {
+                    matches.push({
+                        matchNumber: matches.length + 1,
+                        teamA: gTeams[i].name,
+                        teamAId: gTeams[i].id,
+                        vs: 'vs',
+                        teamB: gTeams[j].name,
+                        teamBId: gTeams[j].id,
+                        date: `${gName} - Rd ${i + j}`,
+                        group: gName as any
+                    });
+                }
             }
+        };
+
+        generateGroup(grA, 'Group A');
+        generateGroup(grB, 'Group B');
+
+        // 2. Super Sixes (Placeholders)
+        // 15 matches (6 teams RR)
+        for (let i = 0; i < 15; i++) {
+            matches.push({
+                matchNumber: `SS${i + 1}`,
+                teamA: 'TBD',
+                vs: 'vs',
+                teamB: 'TBD',
+                date: `Super Sixes - Rd ${i + 1}`,
+                group: 'Super Sixes' as any
+            });
         }
 
-        // Knockouts
-        matches.push({ matchNumber: 'SF1', teamA: '1st', vs: 'vs', teamB: '4th', date: 'Semi-Final', group: 'Semi-Finals' });
-        matches.push({ matchNumber: 'SF2', teamA: '2nd', vs: 'vs', teamB: '3rd', date: 'Semi-Final', group: 'Semi-Finals' });
+        // 3. Knockouts
+        matches.push({ matchNumber: 'SF1', teamA: '1st SS', vs: 'vs', teamB: '4th SS', date: 'Semi-Final', group: 'Semi-Finals' });
+        matches.push({ matchNumber: 'SF2', teamA: '2nd SS', vs: 'vs', teamB: '3rd SS', date: 'Semi-Final', group: 'Semi-Finals' });
         matches.push({ matchNumber: 'Final', teamA: 'SF1 Winner', vs: 'vs', teamB: 'SF2 Winner', date: 'Final', group: 'Final' });
 
         return matches;
@@ -771,72 +801,60 @@ export const isTeamonLosingStreak = (teamId: string, format: Format, gameData: G
 
 export const getSmartAILineup = (team: Team, format: Format, group?: string, forceReshuffle: boolean = false) => {
     const squad = [...team.squad];
-    
-    // 1. Filter out injured players
     const available = squad.filter(p => !p.injury && (p.fitness || 100) >= 30);
     
-    // 2. Select the best XI based on Skill + Form + Potential
-    // If reshuffling, we put more weight on FORM
-    const bestXI = [...available].sort((a, b) => {
-        const baseSkillA = Math.max(a.battingSkill, a.secondarySkill);
-        const baseSkillB = Math.max(b.battingSkill, b.secondarySkill);
-        
-        const formMultiplierA = forceReshuffle ? ((a.form || 50) / 40) : ((a.form || 50) / 50);
-        const formMultiplierB = forceReshuffle ? ((b.form || 50) / 40) : ((b.form || 50) / 50);
+    // Sort criteria: Skill * Form
+    const sorted = [...available].sort((a,b) => {
+        const scoreA = Math.max(a.battingSkill, a.secondarySkill) * ((a.form || 50) / 50);
+        const scoreB = Math.max(b.battingSkill, b.secondarySkill) * ((b.form || 50) / 50);
+        return scoreB - scoreA;
+    });
 
-        return (baseSkillB * formMultiplierB) - (baseSkillA * formMultiplierA);
-    }).slice(0, 11);
+    const xi: Player[] = [];
 
-    // 3. Ensure role balance (1 Keeper, at least 5 Bowlers)
-    const xi = [...bestXI];
-    const bench = available.filter(p => !xi.find(x => x.id === p.id));
+    // 1. Find Wicket-Keeper
+    const bestWK = sorted.find(p => p.role === PlayerRole.WICKET_KEEPER);
+    if (bestWK) xi.push(bestWK);
 
-    // Ensure Wicket-Keeper
-    if (!xi.some(p => p.role === PlayerRole.WICKET_KEEPER)) {
-        const bestBKeeper = [...available].sort((a,b) => b.battingSkill - a.battingSkill).find(p => p.role === PlayerRole.WICKET_KEEPER);
-        if (bestBKeeper) {
-            // Find lowest rated player in XI to replace
-            const lowestIdx = xi.reduce((minIdx, p, idx, arr) => 
-                Math.max(p.battingSkill, p.secondarySkill) < Math.max(arr[minIdx].battingSkill, arr[minIdx].secondarySkill) ? idx : minIdx, 0);
-            xi[lowestIdx] = bestBKeeper;
-        }
-    }
+    // 2. Find Openers
+    const openers = sorted.filter(p => p.isOpener && !xi.find(x => x.id === p.id)).slice(0, 2);
+    openers.forEach(p => xi.push(p));
 
-    // Ensure 5 Bowlers
-    const getBowlersCount = (list: Player[]) => list.filter(p => [PlayerRole.ALL_ROUNDER, PlayerRole.FAST_BOWLER, PlayerRole.SPIN_BOWLER].includes(p.role)).length;
-    const bowlersCount = getBowlersCount(xi);
+    // 3. Find 4 Specialists Bowlers (at least 1 spin, at least 2 fast)
+    const specialists = sorted.filter(p => !xi.find(x => x.id === p.id));
+    const spinSpecialists = specialists.filter(p => p.role === PlayerRole.SPIN_BOWLER).sort((a,b) => b.secondarySkill - a.secondarySkill);
+    const fastSpecialists = specialists.filter(p => p.role === PlayerRole.FAST_BOWLER).sort((a,b) => b.secondarySkill - a.secondarySkill);
+    const allRounders = specialists.filter(p => p.role === PlayerRole.ALL_ROUNDER).sort((a,b) => b.secondarySkill - a.secondarySkill);
+
+    const matchBowlers: Player[] = [];
+    if (spinSpecialists.length > 0) matchBowlers.push(spinSpecialists.shift()!);
+    while (matchBowlers.length < 3 && fastSpecialists.length > 0) matchBowlers.push(fastSpecialists.shift()!);
     
-    if (bowlersCount < 5) {
-        const potentialBowlers = available
-            .filter(p => !xi.some(x => x.id === p.id) && [PlayerRole.FAST_BOWLER, PlayerRole.SPIN_BOWLER, PlayerRole.ALL_ROUNDER].includes(p.role))
-            .sort((a,b) => b.secondarySkill - a.secondarySkill);
+    // Fill up to 4 key bowlers from remaining options
+    const pool = [...spinSpecialists, ...fastSpecialists, ...allRounders].sort((a,b) => b.secondarySkill - a.secondarySkill);
+    while (matchBowlers.length < 4 && pool.length > 0) {
+        matchBowlers.push(pool.shift()!);
+    }
+    matchBowlers.forEach(b => xi.push(b));
 
-        for (let i = 0; i < 5 - bowlersCount; i++) {
-            if (potentialBowlers[i]) {
-                const lowestNonBowlerIdx = xi.findIndex(p => p.role === PlayerRole.BATSMAN);
-                if (lowestNonBowlerIdx !== -1) {
-                    xi[lowestNonBowlerIdx] = potentialBowlers[i];
-                }
-            }
-        }
+    // 4. Fill remaining slots with best available (prioritize batters)
+    const rem = sorted.filter(p => !xi.find(x => x.id === p.id));
+    while (xi.length < 11 && rem.length > 0) {
+        xi.push(rem.shift()!);
     }
 
-    // 4. Proper Batting Order Sorting
+    // 5. Final Batting Order Sorting
     return xi.sort((a, b) => {
-        const getOrderRank = (p: Player) => {
+        const getRank = (p: Player) => {
             if (p.isOpener) return 1;
-            if (p.role === PlayerRole.BATSMAN) return 2;
-            if (p.role === PlayerRole.WICKET_KEEPER) return 3;
+            if (p.role === PlayerRole.WICKET_KEEPER) return 2;
+            if (p.role === PlayerRole.BATSMAN) return 3;
             if (p.role === PlayerRole.ALL_ROUNDER) return 4;
-            return 5; // Bowlers at the bottom
+            return 5;
         };
-
-        const rankA = getOrderRank(a);
-        const rankB = getOrderRank(b);
-
+        const rankA = getRank(a);
+        const rankB = getRank(b);
         if (rankA !== rankB) return rankA - rankB;
-        
-        // Within same rank, sort by batting skill
         return b.battingSkill - a.battingSkill;
     });
 };
