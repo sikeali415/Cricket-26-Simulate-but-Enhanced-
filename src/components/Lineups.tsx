@@ -35,11 +35,24 @@ const Lineups: React.FC<LineupsProps> = ({
     const [selectedTeamId, setSelectedTeamId] = useState(initialTeamId || userTeam.id);
     const currentFormat = gameData.currentFormat;
 
+    const [searchQuery, setSearchQuery] = useState('');
+    const [viewMode, setViewMode] = useState<'TACTRICAL' | 'STATS'>('TACTRICAL');
+
     const selectedTeam = gameData.teams.find(t => t.id === selectedTeamId) || userTeam;
     const isUserTeam = selectedTeam.id === userTeam.id;
 
+    const filteredSquad = selectedTeam.squad.filter(p => 
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        p.role.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     const playingXIIds = gameData.playingXIs[selectedTeam.id]?.[currentFormat] || selectedTeam.squad.slice(0, 11).map(p => p.id);
     const playingXI = playingXIIds.map(id => selectedTeam.squad.find(p => p.id === id)).filter(Boolean) as Player[];
+
+    const filteredPlayingXI = playingXI.filter(p => 
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        p.role.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     const togglePlayer = (player: Player) => {
         if (!isUserTeam) return;
@@ -132,7 +145,19 @@ const Lineups: React.FC<LineupsProps> = ({
                         </h1>
                     </div>
 
-                    <div className="flex flex-col md:flex-row items-center gap-2">
+                    <div className="flex flex-col md:flex-row items-center gap-4 flex-1 max-w-2xl justify-end">
+                        <div className="relative w-full md:w-64">
+                            <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-white/20" />
+                            <input 
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="SEARCH SQUAD..."
+                                className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-[10px] font-black uppercase tracking-widest text-white focus:outline-none focus:border-teal-500/50 transition-all"
+                            />
+                        </div>
+
+                        <div className="flex flex-col md:flex-row items-center gap-2">
                         {isUserTeam && (
                             <div className="flex items-center gap-2 mr-4">
                                 <motion.button
@@ -157,6 +182,22 @@ const Lineups: React.FC<LineupsProps> = ({
                                 )}
                             </div>
                         )}
+
+                        {/* View Toggle */}
+                        <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 ml-2">
+                           <button 
+                               onClick={() => setViewMode('TACTRICAL')}
+                               className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${viewMode === 'TACTRICAL' ? 'bg-teal-500 text-black shadow-[0_0_15px_rgba(20,184,166,0.3)]' : 'text-white/40 hover:text-white'}`}
+                           >
+                               Tactics
+                           </button>
+                           <button 
+                               onClick={() => setViewMode('STATS')}
+                               className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${viewMode === 'STATS' ? 'bg-teal-500 text-black shadow-[0_0_15px_rgba(20,184,166,0.3)]' : 'text-white/40 hover:text-white'}`}
+                           >
+                               Stats
+                           </button>
+                        </div>
                         
                         <div className="flex flex-col gap-1.5 min-w-[160px]">
                             <label className="text-[7px] font-black uppercase tracking-widest text-white/30 ml-1">SELECT_TEAM</label>
@@ -174,8 +215,9 @@ const Lineups: React.FC<LineupsProps> = ({
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div className="flex justify-between items-center mt-6">
+            <div className="flex justify-between items-center mt-6">
                     <div className="flex items-center gap-4">
                         <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">
                             FORMAT: {currentFormat}
@@ -208,7 +250,7 @@ const Lineups: React.FC<LineupsProps> = ({
                         <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/60">STARTING_XI (ORDERED)</h3>
                     </div>
                     <div className="grid grid-cols-1 gap-3">
-                        {playingXI.map((player, index) => (
+                        {filteredPlayingXI.map((player, index) => (
                             <motion.div
                                 key={player.id}
                                 layout
@@ -248,73 +290,74 @@ const Lineups: React.FC<LineupsProps> = ({
                                                 </span>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-3 mt-0.5">
-                                            <div className={`text-[8px] font-black uppercase tracking-[0.2em] ${getRoleColor(player.role)}`}>
-                                                {getRoleFullName(player.role)}
-                                            </div>
-                                            {player.isOpener && (
-                                                <div className="text-[7px] font-black text-teal-400/60 uppercase tracking-widest">OPENER</div>
-                                            )}
-                                            {/* Mastery Tags */}
-                                            <div className="flex flex-wrap gap-1">
-                                                {getPlayerPhaseTags(player.stats[currentFormat] || {} as any).map(tag => (
-                                                    <span key={tag} className="text-[6px] font-black px-1.5 py-0.5 rounded-full border bg-teal-500/10 border-teal-500/20 text-teal-400">
-                                                        {tag.toUpperCase()}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                            <div className="flex items-center gap-2 text-[7px] font-bold text-white/30 uppercase tracking-widest">
-                                                <span>SKILL: {Math.max(player.battingSkill, player.secondarySkill)}</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Detailed Stats Overlay */}
-                                        <div className="grid grid-cols-2 gap-3 mt-2 p-2 bg-black/40 rounded-xl border border-white/5 group-hover:border-teal-500/20 transition-all">
-                                            <div className="space-y-1">
-                                                <div className="flex items-center justify-between">
-                                                    <p className="text-[6px] font-black text-white/20 uppercase tracking-widest">BATTING</p>
-                                                    <span className="text-[6px] font-bold text-white/40">{player.stats[currentFormat]?.matches || 0}M | {player.stats[currentFormat]?.hundreds || 0}x100 {player.stats[currentFormat]?.fifties || 0}x50</span>
+                                        {viewMode === 'TACTRICAL' ? (
+                                            <div className="flex items-center gap-3 mt-0.5">
+                                                <div className={`text-[8px] font-black uppercase tracking-[0.2em] ${getRoleColor(player.role)}`}>
+                                                    {getRoleFullName(player.role)}
                                                 </div>
-                                                <div className="grid grid-cols-4 gap-2">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-[10px] font-black text-teal-500 leading-none">{player.stats[currentFormat]?.runs || 0}</span>
-                                                        <span className="text-[5px] text-white/30 font-bold uppercase">RUNS</span>
-                                                    </div>
-                                                    <div className="flex flex-col text-center">
-                                                        <span className="text-[10px] font-black text-white leading-none">{(player.stats[currentFormat]?.average || 0).toFixed(1)}</span>
-                                                        <span className="text-[5px] text-white/30 font-bold uppercase">AVG</span>
-                                                    </div>
-                                                    <div className="flex flex-col text-center">
-                                                        <span className="text-[10px] font-black text-white leading-none">{(player.stats[currentFormat]?.strikeRate || 0).toFixed(1)}</span>
-                                                        <span className="text-[5px] text-white/30 font-bold uppercase">SR</span>
-                                                    </div>
-                                                    <div className="flex flex-col text-right">
-                                                        <span className="text-[10px] font-black text-teal-300 leading-none">{player.stats[currentFormat]?.runsByPosition?.[index + 1] || 0}</span>
-                                                        <span className="text-[4px] text-teal-500/60 font-black uppercase">AT #{index + 1}</span>
-                                                    </div>
+                                                {player.isOpener && (
+                                                    <div className="text-[7px] font-black text-teal-400/60 uppercase tracking-widest">OPENER</div>
+                                                )}
+                                                {/* Mastery Tags */}
+                                                <div className="flex flex-wrap gap-1">
+                                                    {getPlayerPhaseTags(player.stats[currentFormat] || {} as any).map(tag => (
+                                                        <span key={tag} className="text-[6px] font-black px-1.5 py-0.5 rounded-full border bg-teal-500/10 border-teal-500/20 text-teal-400">
+                                                            {tag.toUpperCase()}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                                <div className="flex items-center gap-2 text-[7px] font-bold text-white/30 uppercase tracking-widest">
+                                                    <span>SKILL: {Math.max(player.battingSkill, player.secondarySkill)}</span>
                                                 </div>
                                             </div>
-                                            <div className="space-y-1 border-l border-white/5 pl-3">
-                                                <div className="flex items-center justify-between">
-                                                    <p className="text-[6px] font-black text-white/20 uppercase tracking-widest">BOWLING</p>
-                                                    <span className="text-[6px] font-bold text-white/40">{player.stats[currentFormat]?.strikeRate ? player.stats[currentFormat]?.strikeRate.toFixed(1) : '0.0'} <span className="text-[5px]">SR</span></span>
+                                        ) : (
+                                            <div className="grid grid-cols-2 gap-3 mt-2 p-2 bg-black/40 rounded-xl border border-white/5 group-hover:border-teal-500/20 transition-all">
+                                                <div className="space-y-1">
+                                                    <div className="flex items-center justify-between">
+                                                        <p className="text-[6px] font-black text-white/20 uppercase tracking-widest">BATTING</p>
+                                                        <span className="text-[6px] font-bold text-white/40">{player.stats[currentFormat]?.matches || 0}M | {player.stats[currentFormat]?.hundreds || 0}x100</span>
+                                                    </div>
+                                                    <div className="grid grid-cols-4 gap-2">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[10px] font-black text-teal-500 leading-none">{player.stats[currentFormat]?.runs || 0}</span>
+                                                            <span className="text-[5px] text-white/30 font-bold uppercase">RUNS</span>
+                                                        </div>
+                                                        <div className="flex flex-col text-center">
+                                                            <span className="text-[10px] font-black text-white leading-none">{(player.stats[currentFormat]?.average || 0).toFixed(1)}</span>
+                                                            <span className="text-[5px] text-white/30 font-bold uppercase">AVG</span>
+                                                        </div>
+                                                        <div className="flex flex-col text-center">
+                                                            <span className="text-[10px] font-black text-white leading-none">{(player.stats[currentFormat]?.strikeRate || 0).toFixed(1)}</span>
+                                                            <span className="text-[5px] text-white/30 font-bold uppercase">SR</span>
+                                                        </div>
+                                                        <div className="flex flex-col text-right">
+                                                            <span className="text-[10px] font-black text-teal-300 leading-none">{player.stats[currentFormat]?.runsByPosition?.[index + 1] || 0}</span>
+                                                            <span className="text-[4px] text-teal-500/60 font-black uppercase">AT #{index + 1}</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div className="grid grid-cols-3 gap-2">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-[10px] font-black text-blue-400 leading-none">{player.stats[currentFormat]?.wickets || 0}</span>
-                                                        <span className="text-[5px] text-white/30 font-bold uppercase">WKTS</span>
+                                                <div className="space-y-1 border-l border-white/5 pl-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <p className="text-[6px] font-black text-white/20 uppercase tracking-widest">BOWLING</p>
+                                                        <span className="text-[6px] font-bold text-white/40">{(player.stats[currentFormat]?.wickets ? (player.stats[currentFormat]?.ballsBowled / player.stats[currentFormat]?.wickets) : 0).toFixed(1)} <span className="text-[5px]">SR</span></span>
                                                     </div>
-                                                    <div className="flex flex-col text-center">
-                                                        <span className="text-[10px] font-black text-white leading-none">{(player.stats[currentFormat]?.economy || 0).toFixed(1)}</span>
-                                                        <span className="text-[5px] text-white/30 font-bold uppercase">ECO</span>
-                                                    </div>
-                                                    <div className="flex flex-col text-right">
-                                                        <span className="text-[10px] font-black text-white leading-none">{(player.stats[currentFormat]?.bowlingAverage || 0).toFixed(1)}</span>
-                                                        <span className="text-[5px] text-white/30 font-bold uppercase">AVG</span>
+                                                    <div className="grid grid-cols-3 gap-2">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[10px] font-black text-blue-400 leading-none">{player.stats[currentFormat]?.wickets || 0}</span>
+                                                            <span className="text-[5px] text-white/30 font-bold uppercase">WKTS</span>
+                                                        </div>
+                                                        <div className="flex flex-col text-center">
+                                                            <span className="text-[10px] font-black text-white leading-none">{(player.stats[currentFormat]?.economy || 0).toFixed(1)}</span>
+                                                            <span className="text-[5px] text-white/30 font-bold uppercase">ECO</span>
+                                                        </div>
+                                                        <div className="flex flex-col text-right">
+                                                            <span className="text-[10px] font-black text-white leading-none">{(player.stats[currentFormat]?.bowlingAverage || 0).toFixed(1)}</span>
+                                                            <span className="text-[5px] text-white/30 font-bold uppercase">AVG</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
                                 {isUserTeam && (
                                     <div className="flex items-center gap-2 relative z-10">
@@ -350,7 +393,7 @@ const Lineups: React.FC<LineupsProps> = ({
                         <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/60">AVAILABLE_SQUAD</h3>
                     </div>
                     <div className="grid grid-cols-1 gap-3">
-                        {selectedTeam.squad.filter(p => !playingXIIds.includes(p.id)).sort((a,b) => b.battingSkill - a.battingSkill).map((player) => (
+                        {filteredSquad.filter(p => !playingXIIds.includes(p.id)).sort((a,b) => b.battingSkill - a.battingSkill).map((player) => (
                             <motion.div
                                 key={player.id}
                                 layout

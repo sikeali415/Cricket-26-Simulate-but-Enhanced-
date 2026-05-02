@@ -74,7 +74,7 @@ const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
       </motion.div>
 
       <div className="absolute bottom-8 text-[8px] font-mono text-white/10 uppercase tracking-[0.5em]">
-        © 2026 SIKE_GAMES_STUDIO // ALL_RIGHTS_RESERVED
+        © 2026 SIMULATION_CRICKET_GAMES_STUDIO // ALL_RIGHTS_RESERVED
       </div>
     </motion.div>
   );

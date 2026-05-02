@@ -57,6 +57,9 @@ const BottomNavBar = ({ activeScreen, setScreen }: { activeScreen: CareerScreen,
     ];
     return (
         <nav className="bg-[#050808]/95 border-t border-white/5 flex justify-around items-center h-16 md:h-20 backdrop-blur-3xl sticky bottom-0 z-50 px-1 md:px-2">
+            <div className="hidden md:flex items-center justify-center px-4 border-r border-white/5">
+                <span className="text-sm font-black italic text-teal-500">SC</span>
+            </div>
             {navItems.map(item => {
                 const isActive = activeScreen === item.screen;
                 return (
@@ -74,6 +77,14 @@ const BottomNavBar = ({ activeScreen, setScreen }: { activeScreen: CareerScreen,
             })}
         </nav>
     );
+};
+
+const isPlaceholder = (teamName: string) => {
+    if (!teamName) return true;
+    return teamName === 'TBD' || 
+           /^\d(st|nd|rd|th)/.test(teamName) || 
+           teamName.includes('Winner') || 
+           teamName.includes('TBD');
 };
 
 const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGame, theme, setTheme, saveGame, loadGame, showFeedback }) => {
@@ -167,128 +178,114 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
         if (data.currentFormat !== Format.T20_SMASH) return data;
         const currentIndex = data.currentMatchIndex[Format.T20_SMASH];
         const schedule = data.schedule[Format.T20_SMASH] || [];
+        let updatedData = { ...data };
 
         // 1. Initial Group Assignment (Self-Correction for existing saves)
-        const needsGroupAssignment = data.teams.some(t => !t.initialGroup);
-        if (needsGroupAssignment && currentIndex < 56) {
+        const needsGroupAssignment = updatedData.teams.some(t => !t.initialGroup);
+        if (needsGroupAssignment) {
              const teamNamesOrder = [
                 'KNIGHTS', 'FALCONS', 'KINGS', 'RIDERS', 'CHARGERS', 'HAWKS', 'WARRIORS', 'EAGLES',
                 'PANTHERS', 'GLADIATORS', 'STARS', 'STRIKERS', 'TITANS', 'SIXERS', 'ROYALS', 'BLAZERS'
             ];
-            const updatedTeams = data.teams.map(t => {
+            const updatedTeams = updatedData.teams.map(t => {
                 const idx = teamNamesOrder.indexOf(t.name.toUpperCase());
                 if (idx !== -1) {
                     return { ...t, initialGroup: (idx < 8 ? 'A' : 'B') as any };
                 }
                 return t;
             });
-            return { ...data, teams: updatedTeams };
+            updatedData = { ...updatedData, teams: updatedTeams };
         }
 
-        // 2. Transition: Group Stage (56 matches) -> Super Sixes
-        // If we are at 56 or more, but Super Sixes fixtures haven't been resolved from placeholders
-        if (currentIndex >= 56 && currentIndex < 71) {
-            const nextMatch = schedule[currentIndex];
-            if (nextMatch && nextMatch.teamA === 'TBD') {
-                const standings = data.standings[Format.T20_SMASH] || [];
-                const teams = data.teams;
+        // 2. Transition: Group Stage -> Semi-Finals (Index 56 is SF1)
+        if (currentIndex >= 56 && currentIndex <= 57) {
+            const sfMatches = updatedData.schedule[Format.T20_SMASH].filter(m => m.matchNumber === 'SF1' || m.matchNumber === 'SF2');
+            const hasPlaceholders = sfMatches.some(m => isPlaceholder(m.teamA) || isPlaceholder(m.teamB));
 
-                const getTop3 = (groupName: string) => {
-                    return standings
-                        .filter(s => {
-                            const team = teams.find(t => t.id === s.teamId);
-                            return team?.initialGroup === groupName;
-                        })
-                        .sort((a,b) => b.points - a.points || b.netRunRate - a.netRunRate)
-                        .slice(0, 3);
+            if (hasPlaceholders) {
+                const standings = updatedData.standings[Format.T20_SMASH] || [];
+                const teams = updatedData.teams;
+
+                const getTop2 = (groupName: string) => {
+                    const filtered = standings.filter(s => {
+                        const team = teams.find(t => t.id === s.teamId);
+                        return team?.initialGroup === groupName;
+                    });
+                    return filtered.sort((a,b) => b.points - a.points || b.netRunRate - a.netRunRate).slice(0, 2);
                 };
 
-                const topA = getTop3('A');
-                const topB = getTop3('B');
+                const topA = getTop2('A');
+                const topB = getTop2('B');
                 
-                if (topA.length === 3 && topB.length === 3) {
-                    const ssTeams = [...topA, ...topB].map(s => teams.find(t => t.id === s.teamId)!);
+                if (topA.length >= 2 && topB.length >= 2) {
+                    const newSchedule = [...updatedData.schedule[Format.T20_SMASH]];
+                    const sf1Idx = newSchedule.findIndex(m => m.matchNumber === 'SF1');
+                    const sf2Idx = newSchedule.findIndex(m => m.matchNumber === 'SF2');
 
-                    // Update team groups
-                    const updatedTeams = teams.map(t => {
-                        if (ssTeams.find(ss => ss.id === t.id)) {
-                            return { ...t, group: 'Super Sixes' as any };
-                        }
-                        return t;
-                    });
-
-                    // Generate SS Fixtures
-                    const ssMatches: Match[] = [];
-                    for (let i = 0; i < ssTeams.length; i++) {
-                        for (let j = i + 1; j < ssTeams.length; j++) {
-                            ssMatches.push({
-                                matchNumber: `SS${ssMatches.length + 1}`,
-                                teamA: ssTeams[i].name,
-                                teamAId: ssTeams[i].id,
-                                vs: 'vs',
-                                teamB: ssTeams[j].name,
-                                teamBId: ssTeams[j].id,
-                                date: `Super Sixes - Rd ${ssMatches.length + 1}`,
-                                group: 'Super Sixes' as any
-                            });
-                        }
+                    if (sf1Idx !== -1) {
+                        newSchedule[sf1Idx] = { ...newSchedule[sf1Idx], teamA: topA[0].teamName, teamAId: topA[0].teamId, teamB: topB[1].teamName, teamBId: topB[1].teamId };
+                    }
+                    if (sf2Idx !== -1) {
+                        newSchedule[sf2Idx] = { ...newSchedule[sf2Idx], teamA: topB[0].teamName, teamAId: topB[0].teamId, teamB: topA[1].teamName, teamBId: topA[1].teamId };
                     }
 
-                    const newSchedule = [...schedule];
-                    ssMatches.forEach((m, i) => {
-                        newSchedule[56 + i] = m;
-                    });
+                    updatedData = { ...updatedData, schedule: { ...updatedData.schedule, [Format.T20_SMASH]: newSchedule } };
 
-                    const ssNews: NewsArticle = {
-                        id: `super-sixes-${data.currentSeason}`,
-                        headline: "Super Sixes Stage Activated!",
-                        date: new Date().toLocaleDateString(),
-                        excerpt: "The battle for supremacy continues.",
-                        content: `The Super Sixes are: ${ssTeams.map(t => t.name).join(', ')}.`,
-                        type: 'league'
-                    };
-
-                    return { 
-                        ...data, 
-                        teams: updatedTeams,
-                        schedule: { ...data.schedule, [Format.T20_SMASH]: newSchedule },
-                        news: [ssNews, ...(data.news || [])].slice(0, 50) 
-                    };
-                }
-            }
-        }
-
-        // 3. Transition: Super Sixes -> Knockouts Transition
-        if (currentIndex >= 71 && currentIndex < 74) {
-            const nextMatch = schedule[currentIndex];
-            if (nextMatch && (nextMatch.teamA === '1st SS' || nextMatch.teamAId === undefined)) {
-                // ... news logic etc handled in resolveMatch more dynamically, but we can add news here
-                const newsId = `knockouts-start-${data.currentSeason}`;
-                if (!data.news?.some(n => n.id === newsId)) {
-                     const standings = data.standings[Format.T20_SMASH] || [];
-                     const ssStandings = standings
-                        .filter(s => {
-                            const team = data.teams.find(t => t.id === s.teamId);
-                            return team?.group === 'Super Sixes';
-                        })
-                        .sort((a,b) => b.points - a.points || b.netRunRate - a.netRunRate);
-
-                    const top4 = ssStandings.slice(0, 4);
-                    if (top4.length === 4) {
-                         const knockoutsNews: NewsArticle = {
+                    const newsId = `knockouts-start-${updatedData.currentSeason}`;
+                    if (!updatedData.news?.some(n => n.id === newsId)) {
+                        const knockoutsNews: NewsArticle = {
                             id: newsId,
-                            headline: "T20 Smash: The Final Four!",
+                            headline: "T20 Challenge: Semi-Finals Confirmed!",
                             date: new Date().toLocaleDateString(),
-                            excerpt: "Semi-final match-ups confirmed.",
-                            content: `Road to the trophy: ${top4.map(s => s.teamName).join(', ')}.`,
+                            excerpt: "The top 4 teams have fought their way through.",
+                            content: `Semi-Final Matchups: 
+                            SF1: ${topA[0].teamName} vs ${topB[1].teamName}
+                            SF2: ${topB[0].teamName} vs ${topA[1].teamName}`,
                             type: 'league'
                         };
-                        return { ...data, news: [knockoutsNews, ...(data.news || [])].slice(0, 50) };
+                        updatedData = { ...updatedData, news: [knockoutsNews, ...(updatedData.news || [])].slice(0, 50) };
                     }
                 }
             }
         }
-        return data;
+
+        // 3. Transition: Semi-Finals -> Grand Final (Index 58 is Final)
+        if (currentIndex === 58) {
+            const finalMatch = updatedData.schedule[Format.T20_SMASH].find(m => m.matchNumber === 'Final');
+            if (finalMatch && (isPlaceholder(finalMatch.teamA) || isPlaceholder(finalMatch.teamB))) {
+                const results = updatedData.matchResults[Format.T20_SMASH] || [];
+                const sf1Res = results.find(r => r && r.matchNumber === 'SF1');
+                const sf2Res = results.find(r => r && r.matchNumber === 'SF2');
+
+                if (sf1Res && sf2Res) {
+                    const winner1 = updatedData.teams.find(t => t.id === sf1Res.winnerId);
+                    const winner2 = updatedData.teams.find(t => t.id === sf2Res.winnerId);
+                    
+                    if (winner1 && winner2) {
+                        const newSchedule = [...updatedData.schedule[Format.T20_SMASH]];
+                        const fIdx = newSchedule.findIndex(m => m.matchNumber === 'Final');
+                        if (fIdx !== -1) {
+                            newSchedule[fIdx] = { ...newSchedule[fIdx], teamA: winner1.name, teamAId: winner1.id, teamB: winner2.name, teamBId: winner2.id };
+                        }
+                        updatedData = { ...updatedData, schedule: { ...updatedData.schedule, [Format.T20_SMASH]: newSchedule } };
+
+                        const newsId = `final-confirmed-${updatedData.currentSeason}`;
+                        if (!updatedData.news?.some(n => n.id === newsId)) {
+                            const finalNews: NewsArticle = {
+                                id: newsId,
+                                headline: "T20 Challenge: The Grand Final!",
+                                date: new Date().toLocaleDateString(),
+                                excerpt: `${winner1.name} and ${winner2.name} will battle for the cup.`,
+                                content: `The final is set! ${winner1.name} will take on ${winner2.name} in what promises to be a thrilling conclusion to the tournament.`,
+                                type: 'league'
+                            };
+                            updatedData = { ...updatedData, news: [finalNews, ...(updatedData.news || [])].slice(0, 50) };
+                        }
+                    }
+                }
+            }
+        }
+        return updatedData;
     }, []);
 
     const handleUpdatePlayer = async (updatedPlayer: Player) => {
@@ -420,7 +417,7 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
             for (let i = 0; i < 8; i++) {
                 if (mIdx < schedule.length) {
                     const match = resolveMatch(schedule[mIdx], updatedData, f);
-                    if (match.teamA === 'TBD' || match.teamB === 'TBD' || match.teamA.includes('st') || match.teamA.includes('nd') || match.teamA.includes('SF')) break;
+                    if (isPlaceholder(match.teamA) || isPlaceholder(match.teamB)) break;
 
                     const result = runSimulationForCurrentFormat(match, updatedData);
                     updatedData = updateStatsFromMatch(result, f, updatedData);
@@ -460,7 +457,7 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
         while (matchIndex < schedule.length && simulatedCount < maxSimulations) {
             const matchToSim = resolveMatch(schedule[matchIndex], currentData, currentData.currentFormat);
             
-            if (matchToSim.teamA === 'TBD' || matchToSim.teamB === 'TBD' || matchToSim.teamA.includes('st') || matchToSim.teamA.includes('nd') || matchToSim.teamA.includes('SF')) break;
+            if (isPlaceholder(matchToSim.teamA) || isPlaceholder(matchToSim.teamB)) break;
 
             const isUserTeamMatch = matchToSim.teamA === userTeam.name || matchToSim.teamB === userTeam.name;
             if (isUserTeamMatch) break;
@@ -527,7 +524,7 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
                 return prev;
             }
 
-            if (match.teamA === 'TBD' || match.teamB === 'TBD' || match.teamA.includes('st') || match.teamA.includes('nd') || match.teamA.includes('SF')) {
+            if (match.teamA === 'TBD' || match.teamB === 'TBD' || isPlaceholder(match.teamA) || isPlaceholder(match.teamB)) {
                 setIsAutoSimulating(false);
                 return prev;
             }
@@ -566,13 +563,18 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
     const handlePlayMatch = () => {
         if (!userTeam || !gameData.schedule || !gameData.currentMatchIndex) return;
         
-        const schedule = gameData.schedule[gameData.currentFormat];
-        const currentMatchIndex = gameData.currentMatchIndex[gameData.currentFormat];
+        let currentData = checkT20SmashTransitions(gameData);
+        if (currentData !== gameData) {
+            setGameData(currentData);
+        }
+
+        const schedule = currentData.schedule[currentData.currentFormat];
+        const currentMatchIndex = currentData.currentMatchIndex[currentData.currentFormat];
         if (schedule === undefined || currentMatchIndex === undefined || currentMatchIndex >= schedule.length) return;
 
-        const matchToSim = resolveMatch(schedule[currentMatchIndex], gameData, gameData.currentFormat);
+        const matchToSim = resolveMatch(schedule[currentMatchIndex], currentData, currentData.currentFormat);
 
-        if (matchToSim.teamA === 'TBD' || matchToSim.teamB === 'TBD' || matchToSim.teamA.includes('st') || matchToSim.teamB.includes('SF')) {
+        if (isPlaceholder(matchToSim.teamA) || isPlaceholder(matchToSim.teamB)) {
             showFeedback("Waiting for league stage to conclude.", "error");
             return;
         }
@@ -582,20 +584,20 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
         if (isUserTeamMatch) {
              setMatchStartMode('play');
              // Update AI Squads one last time before match
-             const updatedData = updateAISquads(gameData);
+             const updatedData = updateAISquads(currentData);
              setGameData(updatedData);
              setScreen('MATCH_STRATEGY');
         } else {
-             const result = runSimulationForCurrentFormat(matchToSim, gameData);
-             let updatedData = updateStatsFromMatch(result, gameData.currentFormat, gameData);
+             const result = runSimulationForCurrentFormat(matchToSim, currentData);
+             let updatedData = updateStatsFromMatch(result, currentData.currentFormat, currentData);
              
              // Simulate Injuries
              updatedData = simulateInjuries(updatedData, result);
              // Update AI Squads
              updatedData = updateAISquads(updatedData);
 
-             if (updatedData.currentMatchIndex && updatedData.currentMatchIndex[gameData.currentFormat] !== undefined) {
-                 updatedData.currentMatchIndex[gameData.currentFormat]++;
+             if (updatedData.currentMatchIndex && updatedData.currentMatchIndex[currentData.currentFormat] !== undefined) {
+                 updatedData.currentMatchIndex[currentData.currentFormat]++;
                  updatedData = checkT20SmashTransitions(updatedData);
              }
              const sponsorship = updatedData.sponsorships?.[updatedData.currentFormat] || INITIAL_SPONSORSHIPS[updatedData.currentFormat];
@@ -610,13 +612,18 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
     const handleSimulateWithPlay = () => {
         if (!userTeam || !gameData.schedule || !gameData.currentMatchIndex) return;
         
-        const schedule = gameData.schedule[gameData.currentFormat];
-        const currentMatchIndex = gameData.currentMatchIndex[gameData.currentFormat];
+        let currentData = checkT20SmashTransitions(gameData);
+        if (currentData !== gameData) {
+            setGameData(currentData);
+        }
+
+        const schedule = currentData.schedule[currentData.currentFormat];
+        const currentMatchIndex = currentData.currentMatchIndex[currentData.currentFormat];
         if (schedule === undefined || currentMatchIndex === undefined || currentMatchIndex >= schedule.length) return;
 
-        const matchToSim = resolveMatch(schedule[currentMatchIndex], gameData, gameData.currentFormat);
+        const matchToSim = resolveMatch(schedule[currentMatchIndex], currentData, currentData.currentFormat);
 
-        if (matchToSim.teamA === 'TBD' || matchToSim.teamB === 'TBD' || matchToSim.teamA.includes('st') || matchToSim.teamB.includes('SF')) {
+        if (isPlaceholder(matchToSim.teamA) || isPlaceholder(matchToSim.teamB)) {
             showFeedback("Waiting for league stage to conclude.", "error");
             return;
         }
@@ -626,7 +633,7 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
         if (isUserTeamMatch) {
              setMatchStartMode('simulate');
              // Update AI Squads one last time before match
-             const updatedData = updateAISquads(gameData);
+             const updatedData = updateAISquads(currentData);
              setGameData(updatedData);
              setScreen('MATCH_STRATEGY');
         } else {
@@ -637,27 +644,32 @@ const CareerHub: React.FC<CareerHubProps> = ({ gameData, setGameData, onResetGam
     const handleQuickSimulate = () => {
         if (!userTeam || !gameData.schedule || !gameData.currentMatchIndex) return;
         
-        const schedule = gameData.schedule[gameData.currentFormat];
-        const currentMatchIndex = gameData.currentMatchIndex[gameData.currentFormat];
+        let currentData = checkT20SmashTransitions(gameData);
+        if (currentData !== gameData) {
+            setGameData(currentData);
+        }
+
+        const schedule = currentData.schedule[currentData.currentFormat];
+        const currentMatchIndex = currentData.currentMatchIndex[currentData.currentFormat];
         if (schedule === undefined || currentMatchIndex === undefined || currentMatchIndex >= schedule.length) return;
 
-        const matchToSim = resolveMatch(schedule[currentMatchIndex], gameData, gameData.currentFormat);
+        const matchToSim = resolveMatch(schedule[currentMatchIndex], currentData, currentData.currentFormat);
 
-        if (matchToSim.teamA === 'TBD' || matchToSim.teamB === 'TBD' || matchToSim.teamA.includes('st') || matchToSim.teamB.includes('SF')) {
+        if (isPlaceholder(matchToSim.teamA) || isPlaceholder(matchToSim.teamB)) {
             showFeedback("Waiting for league stage to conclude.", "error");
             return;
         }
 
-        const result = runSimulationForCurrentFormat(matchToSim, gameData);
-        let updatedData = updateStatsFromMatch(result, gameData.currentFormat, gameData);
+        const result = runSimulationForCurrentFormat(matchToSim, currentData);
+        let updatedData = updateStatsFromMatch(result, currentData.currentFormat, currentData);
         
         // Simulate Injuries
         updatedData = simulateInjuries(updatedData, result);
         // Update AI Squads
         updatedData = updateAISquads(updatedData);
 
-        if (updatedData.currentMatchIndex && updatedData.currentMatchIndex[gameData.currentFormat] !== undefined) {
-            updatedData.currentMatchIndex[gameData.currentFormat]++;
+        if (updatedData.currentMatchIndex && updatedData.currentMatchIndex[currentData.currentFormat] !== undefined) {
+            updatedData.currentMatchIndex[currentData.currentFormat]++;
             updatedData = checkT20SmashTransitions(updatedData);
         }
         const sponsorship = updatedData.sponsorships?.[updatedData.currentFormat] || INITIAL_SPONSORSHIPS[updatedData.currentFormat];

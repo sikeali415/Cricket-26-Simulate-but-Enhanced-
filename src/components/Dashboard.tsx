@@ -66,7 +66,7 @@ const Dashboard: React.FC<DashboardProps> = ({ gameData, userTeam, setScreen, ha
                     <h2 className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.4em] text-teal-500/60">
                         {sponsorship?.sponsorName || "SIKE'S"} {sponsorship?.tournamentName || "T20 CHAMPIONSHIP"} // SEASON {gameData.currentSeason}
                     </h2>
-                    <h1 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter text-white leading-none">THE CAREER HUB</h1>
+                    <h1 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter text-white leading-none">SIMULATION CRICKET HUB <span className="text-[10px] bg-teal-500 text-black px-1.5 py-0.5 rounded not-italic ml-2 align-middle">SC</span></h1>
                 </div>
             </header>
 

@@ -145,13 +145,15 @@ const Standings: React.FC<StandingsProps> = ({ gameData, onViewScorecard, onView
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: 10 }}
                         >
-                            {isT20Smash && renderTable(roundRobinStandings, 'T20 Smash League')}
-                            {!isT20Smash && (
+                            {isT20Smash ? (
                                 <>
                                     {superSixStandings.length > 0 && renderTable(superSixStandings, 'Super Six League')}
                                     {groupAStandings.length > 0 && superSixStandings.length === 0 && renderTable(groupAStandings, 'Group A')}
                                     {groupBStandings.length > 0 && superSixStandings.length === 0 && renderTable(groupBStandings, 'Group B')}
-                                    {roundRobinStandings.length > 0 && groupAStandings.length === 0 && superSixStandings.length === 0 && renderTable(roundRobinStandings, 'Global Standings')}
+                                </>
+                            ) : (
+                                <>
+                                    {roundRobinStandings.length > 0 && renderTable(roundRobinStandings, 'Global Standings')}
                                 </>
                             )}
                         </motion.div>

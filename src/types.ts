@@ -1,6 +1,6 @@
 
 export enum Format {
-    T20_SMASH = 'T20 Smash',
+    T20_SMASH = 'T20 Challenge',
     ODI = 'One-day Shield',
     SHIELD = 'FC',
     DEVELOPMENT_T20 = 'Development T20 Cup',

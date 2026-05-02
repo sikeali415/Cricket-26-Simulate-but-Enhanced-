@@ -6,7 +6,7 @@ export const MIN_SQUAD_SIZE = 16;
 export const MAX_FOREIGN_PLAYERS = 9; // Since min 7 local, max is 16 - 7 = 9
 
 export const BRANDS = [
-    { name: "Sike's", color: "text-yellow-500", style: "font-extrabold tracking-tight font-display", logo: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2h7.6l-6 4.8 2.4 7.2-6-4.8-6 4.8 2.4-7.2-6-4.8h7.6z" /></svg>' },
+    { name: "Simu", color: "text-yellow-500", style: "font-extrabold tracking-tight font-display", logo: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2h7.6l-6 4.8 2.4 7.2-6-4.8-6 4.8 2.4-7.2-6-4.8h7.6z" /></svg>' },
     { name: "Apex", color: "text-cyan-400", style: "font-sans tracking-widest uppercase", logo: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg>' },
     { name: "Malik", color: "text-red-600", style: "font-serif italic font-bold", logo: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M14.06 9.02l.92.92L3.92 21h16.16V23H3a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h1V9.02zM12 3a2 2 0 0 1 2 2v4h-4V5a2 2 0 0 1 2-2z"/></svg>' },
     { name: "G.S", color: "text-green-500", style: "font-mono font-bold", logo: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" /></svg>' }
@@ -25,25 +25,25 @@ export const TOURNAMENT_LOGOS = [
 ];
 
 export const SPONSOR_THRESHOLDS = {
-    [Format.T20_SMASH]: { "Sike's": 40, "Apex": 35, "Malik": 30, "G.S": 25 },
-    [Format.ODI]: { "Sike's": 45, "Apex": 40, "Malik": 30, "G.S": 25 },
-    [Format.SHIELD]: { "Sike's": 40, "Apex": 35, "Malik": 30, "G.S": 25 },
-    [Format.DEVELOPMENT_T20]: { "Sike's": 20, "Apex": 15, "Malik": 10, "G.S": 5 },
-    [Format.RISE_T20]: { "Sike's": 30, "Apex": 25, "Malik": 20, "G.S": 15 },
-    [Format.DEVELOPMENT_ODI]: { "Sike's": 25, "Apex": 20, "Malik": 15, "G.S": 10 },
-    [Format.RISE_ODI]: { "Sike's": 35, "Apex": 30, "Malik": 25, "G.S": 20 },
-    [Format.DEVELOPMENT_FIRST_CLASS]: { "Sike's": 20, "Apex": 15, "Malik": 10, "G.S": 5 },
-    [Format.RISE_FIRST_CLASS]: { "Sike's": 30, "Apex": 25, "Malik": 20, "G.S": 15 },
+    [Format.T20_SMASH]: { "Simu": 40, "Apex": 35, "Malik": 30, "G.S": 25 },
+    [Format.ODI]: { "Simu": 45, "Apex": 40, "Malik": 30, "G.S": 25 },
+    [Format.SHIELD]: { "Simu": 40, "Apex": 35, "Malik": 30, "G.S": 25 },
+    [Format.DEVELOPMENT_T20]: { "Simu": 20, "Apex": 15, "Malik": 10, "G.S": 5 },
+    [Format.RISE_T20]: { "Simu": 30, "Apex": 25, "Malik": 20, "G.S": 15 },
+    [Format.DEVELOPMENT_ODI]: { "Simu": 25, "Apex": 20, "Malik": 15, "G.S": 10 },
+    [Format.RISE_ODI]: { "Simu": 35, "Apex": 30, "Malik": 25, "G.S": 20 },
+    [Format.DEVELOPMENT_FIRST_CLASS]: { "Simu": 20, "Apex": 15, "Malik": 10, "G.S": 5 },
+    [Format.RISE_FIRST_CLASS]: { "Simu": 30, "Apex": 25, "Malik": 20, "G.S": 15 },
 };
 
 export const INITIAL_SPONSORSHIPS: Record<Format, Sponsorship> = {
-    [Format.T20_SMASH]: { sponsorName: "Sike's", tournamentName: "Super Smash 26", logoColor: "text-yellow-500", tournamentLogo: TOURNAMENT_LOGOS[0].svg, tvChannel: "CricketNow HD", tvLogo: "" },
+    [Format.T20_SMASH]: { sponsorName: "Simu", tournamentName: "Challenge Cup 26", logoColor: "text-yellow-500", tournamentLogo: TOURNAMENT_LOGOS[0].svg, tvChannel: "CricketNow HD", tvLogo: "" },
     [Format.ODI]: { sponsorName: "Apex", tournamentName: "Pro Cup 26", logoColor: "text-cyan-400", tournamentLogo: TOURNAMENT_LOGOS[0].svg, tvChannel: "Apex Sports", tvLogo: "" },
     [Format.SHIELD]: { sponsorName: "Malik", tournamentName: "Shield 26", logoColor: "text-red-600", tournamentLogo: TOURNAMENT_LOGOS[1].svg, tvChannel: "PrimeCast Ultra", tvLogo: "" },
     [Format.DEVELOPMENT_T20]: { sponsorName: "G.S", tournamentName: "Dev T20 Cup", logoColor: "text-green-500", tournamentLogo: TOURNAMENT_LOGOS[0].svg, tvChannel: "Dev Channel", tvLogo: "" },
     [Format.RISE_T20]: { sponsorName: "Malik", tournamentName: "Rise T20", logoColor: "text-blue-500", tournamentLogo: TOURNAMENT_LOGOS[0].svg, tvChannel: "Rise Sports", tvLogo: "" },
     [Format.DEVELOPMENT_ODI]: { sponsorName: "Apex", tournamentName: "Dev ODI Trophy", logoColor: "text-purple-500", tournamentLogo: TOURNAMENT_LOGOS[0].svg, tvChannel: "Apex Sports", tvLogo: "" },
-    [Format.RISE_ODI]: { sponsorName: "Sike's", tournamentName: "Rise ODI Series", logoColor: "text-orange-500", tournamentLogo: TOURNAMENT_LOGOS[0].svg, tvChannel: "CricketNow HD", tvLogo: "" },
+    [Format.RISE_ODI]: { sponsorName: "Simu", tournamentName: "Rise ODI Series", logoColor: "text-orange-500", tournamentLogo: TOURNAMENT_LOGOS[0].svg, tvChannel: "CricketNow HD", tvLogo: "" },
     [Format.DEVELOPMENT_FIRST_CLASS]: { sponsorName: "G.S", tournamentName: "Dev First-Class Cup", logoColor: "text-indigo-500", tournamentLogo: TOURNAMENT_LOGOS[1].svg, tvChannel: "PrimeCast Ultra", tvLogo: "" },
     [Format.RISE_FIRST_CLASS]: { sponsorName: "Malik", tournamentName: "Rise FC Series", logoColor: "text-emerald-500", tournamentLogo: TOURNAMENT_LOGOS[1].svg, tvChannel: "Rise Sports", tvLogo: "" },
 };

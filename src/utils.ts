@@ -380,7 +380,7 @@ export const resolveMatch = (match: Match, gameData: GameData, format: Format): 
         const filtered = sortedStandings.filter(s => {
             const team = teams.find(t => t.id === s.teamId);
             if (groupName.includes('Super Six')) {
-                return team?.group === 'Super Six';
+                return (team?.group as string) === 'Super Six' || (team?.group as string) === 'Super Sixes';
             }
             const groupKey = groupName.replace('Group ', '');
             return team?.initialGroup === groupKey;
@@ -528,66 +528,88 @@ export const generateLeagueSchedule = (teams: Team[], format: Format, doubleRoun
     if (teams.length < 2) return [];
 
     if (format === Format.T20_SMASH) {
-        // T20 Smash Spec: 2 Groups of 8 teams -> Super Sixes -> Knockouts
-        const teamNamesOrder = [
-            'KNIGHTS', 'FALCONS', 'KINGS', 'RIDERS', 'CHARGERS', 'HAWKS', 'WARRIORS', 'EAGLES',
-            'PANTHERS', 'GLADIATORS', 'STARS', 'STRIKERS', 'TITANS', 'SIXERS', 'ROYALS', 'BLAZERS'
+        // User provided 59-match schedule for T20 Challenge
+        const t20Schedule = [
+            { team1: "Kings", team2: "Chargers", date: "Feb 5", day: "Fri", matchType: "Group A" },
+            { team1: "Hawks", team2: "Falcons", date: "Feb 6", day: "Sat", matchType: "Group A" },
+            { team1: "Warriors", team2: "Riders", date: "Feb 6", day: "Sat", matchType: "Group A" },
+            { team1: "Eagles", team2: "Knights", date: "Feb 7", day: "Sun", matchType: "Group A" },
+            { team1: "Sixers", team2: "Blazers", date: "Feb 7", day: "Sun", matchType: "Group B" },
+            { team1: "Stars", team2: "Strikers", date: "Feb 8", day: "Mon", matchType: "Group B" },
+            { team1: "Gladiators", team2: "Royals", date: "Feb 9", day: "Tue", matchType: "Group B" },
+            { team1: "Titans", team2: "Panthers", date: "Feb 10", day: "Wed", matchType: "Group B" },
+            { team1: "Kings", team2: "Falcons", date: "Feb 11", day: "Thu", matchType: "Group A" },
+            { team1: "Chargers", team2: "Riders", date: "Feb 12", day: "Fri", matchType: "Group A" },
+            { team1: "Hawks", team2: "Knights", date: "Feb 13", day: "Sat", matchType: "Group A" },
+            { team1: "Warriors", team2: "Eagles", date: "Feb 13", day: "Sat", matchType: "Group A" },
+            { team1: "Sixers", team2: "Strikers", date: "Feb 14", day: "Sun", matchType: "Group B" },
+            { team1: "Blazers", team2: "Royals", date: "Feb 14", day: "Sun", matchType: "Group B" },
+            { team1: "Stars", team2: "Panthers", date: "Feb 15", day: "Mon", matchType: "Group B" },
+            { team1: "Gladiators", team2: "Titans", date: "Feb 16", day: "Tue", matchType: "Group B" },
+            { team1: "Kings", team2: "Riders", date: "Feb 17", day: "Wed", matchType: "Group A" },
+            { team1: "Falcons", team2: "Knights", date: "Feb 18", day: "Thu", matchType: "Group A" },
+            { team1: "Chargers", team2: "Eagles", date: "Feb 19", day: "Fri", matchType: "Group A" },
+            { team1: "Hawks", team2: "Warriors", date: "Feb 20", day: "Sat", matchType: "Group A" },
+            { team1: "Sixers", team2: "Royals", date: "Feb 20", day: "Sat", matchType: "Group B" },
+            { team1: "Strikers", team2: "Panthers", date: "Feb 21", day: "Sun", matchType: "Group B" },
+            { team1: "Blazers", team2: "Titans", date: "Feb 21", day: "Sun", matchType: "Group B" },
+            { team1: "Stars", team2: "Gladiators", date: "Feb 22", day: "Mon", matchType: "Group B" },
+            { team1: "Kings", team2: "Knights", date: "Feb 23", day: "Tue", matchType: "Group A" },
+            { team1: "Riders", team2: "Eagles", date: "Feb 24", day: "Wed", matchType: "Group A" },
+            { team1: "Falcons", team2: "Warriors", date: "Feb 25", day: "Thu", matchType: "Group A" },
+            { team1: "Chargers", team2: "Hawks", date: "Feb 26", day: "Fri", matchType: "Group A" },
+            { team1: "Sixers", team2: "Panthers", date: "Feb 27", day: "Sat", matchType: "Group B" },
+            { team1: "Royals", team2: "Titans", date: "Feb 27", day: "Sat", matchType: "Group B" },
+            { team1: "Strikers", team2: "Gladiators", date: "Feb 28", day: "Sun", matchType: "Group B" },
+            { team1: "Blazers", team2: "Stars", date: "Feb 28", day: "Sun", matchType: "Group B" },
+            { team1: "Kings", team2: "Eagles", date: "Mar 1", day: "Mon", matchType: "Group A" },
+            { team1: "Knights", team2: "Warriors", date: "Mar 2", day: "Tue", matchType: "Group A" },
+            { team1: "Riders", team2: "Hawks", date: "Mar 3", day: "Wed", matchType: "Group A" },
+            { team1: "Falcons", team2: "Chargers", date: "Mar 4", day: "Thu", matchType: "Group A" },
+            { team1: "Sixers", team2: "Titans", date: "Mar 5", day: "Fri", matchType: "Group B" },
+            { team1: "Panthers", team2: "Gladiators", date: "Mar 6", day: "Sat", matchType: "Group B" },
+            { team1: "Royals", team2: "Stars", date: "Mar 6", day: "Sat", matchType: "Group B" },
+            { team1: "Strikers", team2: "Blazers", date: "Mar 7", day: "Sun", matchType: "Group B" },
+            { team1: "Kings", team2: "Warriors", date: "Mar 7", day: "Sun", matchType: "Group A" },
+            { team1: "Eagles", team2: "Hawks", date: "Mar 8", day: "Mon", matchType: "Group A" },
+            { team1: "Knights", team2: "Chargers", date: "Mar 9", day: "Tue", matchType: "Group A" },
+            { team1: "Riders", team2: "Falcons", date: "Mar 10", day: "Wed", matchType: "Group A" },
+            { team1: "Sixers", team2: "Gladiators", date: "Mar 11", day: "Thu", matchType: "Group B" },
+            { team1: "Titans", team2: "Stars", date: "Mar 12", day: "Fri", matchType: "Group B" },
+            { team1: "Panthers", team2: "Blazers", date: "Mar 13", day: "Sat", matchType: "Group B" },
+            { team1: "Royals", team2: "Strikers", date: "Mar 13", day: "Sat", matchType: "Group B" },
+            { team1: "Kings", team2: "Hawks", date: "Mar 14", day: "Sun", matchType: "Group A" },
+            { team1: "Warriors", team2: "Chargers", date: "Mar 14", day: "Sun", matchType: "Group A" },
+            { team1: "Eagles", team2: "Falcons", date: "Mar 15", day: "Mon", matchType: "Group A" },
+            { team1: "Knights", team2: "Riders", date: "Mar 16", day: "Tue", matchType: "Group A" },
+            { team1: "Sixers", team2: "Stars", date: "Mar 17", day: "Wed", matchType: "Group B" },
+            { team1: "Gladiators", team2: "Blazers", date: "Mar 18", day: "Thu", matchType: "Group B" },
+            { team1: "Titans", team2: "Strikers", date: "Mar 19", day: "Fri", matchType: "Group B" },
+            { team1: "Panthers", team2: "Royals", date: "Mar 20", day: "Sat", matchType: "Group B" },
         ];
 
         const teamMap = new Map<string, Team>();
         teams.forEach(t => teamMap.set(t.name.toUpperCase(), t));
 
-        // Use initialGroup assigned by randomizeT20SmashGroups or similar logic
-        const grA = teams.filter(t => t.initialGroup === 'A');
-        const grB = teams.filter(t => t.initialGroup === 'B');
-
-        // Fallback for safety if groups not assigned
-        if (grA.length !== 8 || grB.length !== 8) {
-             const orderedTeams = teamNamesOrder.map(name => {
-                 return teamMap.get(name) || teams.find(t => t.name.toUpperCase() === name) || teams[0];
-             });
-             grA.length = 0; grA.push(...orderedTeams.slice(0, 8));
-             grB.length = 0; grB.push(...orderedTeams.slice(8, 16));
-        }
-
-        // 1. Group Stage (56 matches total: 28 per group)
-        const generateGroup = (gTeams: Team[], gName: string) => {
-            for (let i = 0; i < gTeams.length; i++) {
-                for (let j = i + 1; j < gTeams.length; j++) {
-                    matches.push({
-                        matchNumber: matches.length + 1,
-                        teamA: gTeams[i].name,
-                        teamAId: gTeams[i].id,
-                        vs: 'vs',
-                        teamB: gTeams[j].name,
-                        teamBId: gTeams[j].id,
-                        date: `${gName} - Rd ${i + j}`,
-                        group: gName as any
-                    });
-                }
-            }
-        };
-
-        generateGroup(grA, 'Group A');
-        generateGroup(grB, 'Group B');
-
-        // 2. Super Sixes (Placeholders)
-        // 15 matches (6 teams RR)
-        for (let i = 0; i < 15; i++) {
+        t20Schedule.forEach((m, idx) => {
+            const tA = teamMap.get(m.team1.toUpperCase()) || teams.find(t => t.name.toUpperCase() === m.team1.toUpperCase()) || teams[0];
+            const tB = teamMap.get(m.team2.toUpperCase()) || teams.find(t => t.name.toUpperCase() === m.team2.toUpperCase()) || teams[0];
             matches.push({
-                matchNumber: `SS${i + 1}`,
-                teamA: 'TBD',
+                matchNumber: idx + 1,
+                teamA: tA.name,
+                teamAId: tA.id,
                 vs: 'vs',
-                teamB: 'TBD',
-                date: `Super Sixes - Rd ${i + 1}`,
-                group: 'Super Sixes' as any
+                teamB: tB.name,
+                teamBId: tB.id,
+                date: `${m.date} (${m.day})`,
+                group: m.matchType as any
             });
-        }
+        });
 
-        // 3. Knockouts
-        matches.push({ matchNumber: 'SF1', teamA: '1st SS', vs: 'vs', teamB: '4th SS', date: 'Semi-Final', group: 'Semi-Finals' });
-        matches.push({ matchNumber: 'SF2', teamA: '2nd SS', vs: 'vs', teamB: '3rd SS', date: 'Semi-Final', group: 'Semi-Finals' });
-        matches.push({ matchNumber: 'Final', teamA: 'SF1 Winner', vs: 'vs', teamB: 'SF2 Winner', date: 'Final', group: 'Final' });
+        // Knockouts
+        matches.push({ matchNumber: 'SF1', teamA: '1st A', vs: 'vs', teamB: '2nd B', date: 'Mar 24 (Wed)', group: 'Semi-Finals' });
+        matches.push({ matchNumber: 'SF2', teamA: '1st B', vs: 'vs', teamB: '2nd A', date: 'Mar 27 (Sat)', group: 'Semi-Finals' });
+        matches.push({ matchNumber: 'Final', teamA: 'SF1 Winner', vs: 'vs', teamB: 'SF2 Winner', date: 'Apr 1 (Thu)', group: 'Final' });
 
         return matches;
     }
@@ -818,54 +840,91 @@ export const getSmartAILineup = (team: Team, format: Format, group?: string, for
     const squad = [...team.squad];
     const available = squad.filter(p => !p.injury && (p.fitness || 100) >= 30);
     
-    // Sort criteria: Skill * Form
-    const sorted = [...available].sort((a,b) => {
-        const scoreA = Math.max(a.battingSkill, a.secondarySkill) * ((a.form || 50) / 50);
-        const scoreB = Math.max(b.battingSkill, b.secondarySkill) * ((b.form || 50) / 50);
-        return scoreB - scoreA;
+    const xi: Player[] = [];
+    const usedIds = new Set<string>();
+
+    // 1. Find best Wicket-Keeper
+    const wk = available
+        .filter(p => p.role === PlayerRole.WICKET_KEEPER)
+        .sort((a, b) => b.battingSkill - a.battingSkill)[0];
+    
+    // 2. Find 2 best Openers
+    const openers = available
+        .filter(p => p.isOpener)
+        .sort((a, b) => b.battingSkill - a.battingSkill)
+        .slice(0, 2);
+
+    // 3. Find 4 Specialists Bowlers (Min 1 Spin, Min 1 Fast)
+    const spinBowlers = available
+        .filter(p => p.role === PlayerRole.SPIN_BOWLER)
+        .sort((a, b) => b.secondarySkill - a.secondarySkill);
+    
+    const fastBowlers = available
+        .filter(p => p.role === PlayerRole.FAST_BOWLER)
+        .sort((a, b) => b.secondarySkill - a.secondarySkill);
+
+    const selection: Player[] = [];
+    
+    // Add Openers
+    openers.forEach(p => { 
+        if (!usedIds.has(p.id)) {
+            selection.push(p);
+            usedIds.add(p.id);
+        }
     });
 
-    const xi: Player[] = [];
+    // Add WK
+    if (wk && !usedIds.has(wk.id)) {
+        selection.push(wk);
+        usedIds.add(wk.id);
+    }
 
-    // 1. Find Wicket-Keeper
-    const bestWK = sorted.find(p => p.role === PlayerRole.WICKET_KEEPER);
-    if (bestWK) xi.push(bestWK);
-
-    // 2. Find Openers
-    const openers = sorted.filter(p => p.isOpener && !xi.find(x => x.id === p.id)).slice(0, 2);
-    openers.forEach(p => xi.push(p));
-
-    // 3. Find 4 Specialists Bowlers (at least 1 spin, at least 2 fast)
-    const specialists = sorted.filter(p => !xi.find(x => x.id === p.id));
-    const spinSpecialists = specialists.filter(p => p.role === PlayerRole.SPIN_BOWLER).sort((a,b) => b.secondarySkill - a.secondarySkill);
-    const fastSpecialists = specialists.filter(p => p.role === PlayerRole.FAST_BOWLER).sort((a,b) => b.secondarySkill - a.secondarySkill);
-    const allRounders = specialists.filter(p => p.role === PlayerRole.ALL_ROUNDER).sort((a,b) => b.secondarySkill - a.secondarySkill);
-
-    const matchBowlers: Player[] = [];
-    if (spinSpecialists.length > 0) matchBowlers.push(spinSpecialists.shift()!);
-    while (matchBowlers.length < 3 && fastSpecialists.length > 0) matchBowlers.push(fastSpecialists.shift()!);
+    // Add 4 Bowlers (combo)
+    const selectedBowlers: Player[] = [];
+    if (spinBowlers.length > 0) {
+        const s = spinBowlers.find(p => !usedIds.has(p.id));
+        if (s) {
+            selectedBowlers.push(s);
+            usedIds.add(s.id);
+        }
+    }
     
-    // Fill up to 4 key bowlers from remaining options
-    const pool = [...spinSpecialists, ...fastSpecialists, ...allRounders].sort((a,b) => b.secondarySkill - a.secondarySkill);
-    while (matchBowlers.length < 4 && pool.length > 0) {
-        matchBowlers.push(pool.shift()!);
+    while (selectedBowlers.length < 4) {
+        const nextBowler = [...fastBowlers, ...spinBowlers]
+            .filter(p => !usedIds.has(p.id))
+            .sort((a,b) => b.secondarySkill - a.secondarySkill)[0];
+        
+        if (nextBowler) {
+            selectedBowlers.push(nextBowler);
+            usedIds.add(nextBowler.id);
+        } else {
+            break;
+        }
     }
-    matchBowlers.forEach(b => xi.push(b));
 
-    // 4. Fill remaining slots with best available (prioritize batters)
-    const rem = sorted.filter(p => !xi.find(x => x.id === p.id));
-    while (xi.length < 11 && rem.length > 0) {
-        xi.push(rem.shift()!);
+    // Add others up to 11
+    const others = available
+        .filter(p => !usedIds.has(p.id))
+        .sort((a, b) => b.battingSkill - a.battingSkill);
+    
+    selection.push(...selectedBowlers);
+    
+    while (selection.length < 11 && others.length > 0) {
+        const p = others.shift()!;
+        selection.push(p);
+        usedIds.add(p.id);
     }
 
-    // 5. Final Batting Order Sorting
-    return xi.sort((a, b) => {
+    // Final Batting Order Sorting
+    return selection.sort((a, b) => {
         const getRank = (p: Player) => {
+            const isBowler = selectedBowlers.some(bow => bow.id === p.id);
             if (p.isOpener) return 1;
             if (p.role === PlayerRole.WICKET_KEEPER) return 2;
-            if (p.role === PlayerRole.BATSMAN) return 3;
-            if (p.role === PlayerRole.ALL_ROUNDER) return 4;
-            return 5;
+            if (!isBowler && p.role === PlayerRole.BATSMAN) return 3;
+            if (!isBowler && p.role === PlayerRole.ALL_ROUNDER) return 4;
+            if (isBowler) return 5;
+            return 6;
         };
         const rankA = getRank(a);
         const rankB = getRank(b);

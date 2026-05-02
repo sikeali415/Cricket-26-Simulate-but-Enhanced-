@@ -102,10 +102,45 @@ const Settings: React.FC<SettingsProps> = ({ onResetGame, theme, setTheme, saveG
                     </div>
                 </div>
 
-                {/* About */}
+                {/* About & Version */}
+                <div className="space-y-3">
+                    <h3 className="text-xs font-black uppercase italic text-slate-400 tracking-widest">About Simulation Cricket</h3>
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 space-y-4">
+                        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+                            <span className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">Version Number</span>
+                            <span className="text-xs font-black text-teal-500 italic">0.0.1</span>
+                        </div>
+                        
+                        <div className="space-y-2">
+                             <p className="text-[9px] font-black text-slate-900 dark:text-white uppercase tracking-widest">Game Features</p>
+                             <ul className="space-y-1.5">
+                                 {[
+                                     "Dynamic T20 Smash: 2 Groups of 8, Semis & Finals",
+                                     "Real-time Match Simulation with Tactical Control",
+                                     "Advanced Player Mastery & Phase-Specific Tags",
+                                     "Comprehensive Player Stats across all formats",
+                                     "AI Squad Management & Smart Lineup Generator"
+                                 ].map((f, i) => (
+                                     <li key={i} className="flex items-center gap-2 text-[8px] font-bold text-slate-500 uppercase tracking-widest">
+                                         <div className="w-1 h-1 bg-teal-500 rounded-full" />
+                                         {f}
+                                     </li>
+                                 ))}
+                             </ul>
+                        </div>
+
+                        <div className="space-y-2">
+                             <p className="text-[9px] font-black text-slate-900 dark:text-white uppercase tracking-widest">How to Play</p>
+                             <p className="text-[8px] font-bold text-slate-500 uppercase leading-relaxed">
+                                Manage your career through multiple formats. Select your best XI, monitor fitness/form, and lead your team to the title. In-match, use strategy toggles to balance risk and reward.
+                             </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer */}
                 <div className="p-6 text-center">
-                    <div className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-[0.4em] mb-2">Simulation Cricket Manager</div>
-                    <div className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Version 0.0.1</div>
+                    <div className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-[0.4em]">Simulation Cricket</div>
                 </div>
             </div>
         </div>
