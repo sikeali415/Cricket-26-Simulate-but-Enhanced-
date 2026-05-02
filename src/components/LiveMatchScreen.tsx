@@ -1487,46 +1487,67 @@ const LiveMatchScreen: React.FC<LiveMatchScreenProps> = ({ match, gameData, onMa
             </AnimatePresence>
 
             {/* TOP BROADCAST BAR */}
-            <div className="bg-[#050808] p-6 flex justify-between items-center z-20 border-b border-white/5 flex-shrink-0 relative overflow-hidden h-20">
-                 <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-teal-500/5 via-transparent to-transparent pointer-events-none" />
-                 
-                 <div className="flex items-center gap-6 relative z-10">
-                     <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/10 rotate-3 shadow-xl">
-                        <span className="text-teal-500 font-black text-lg italic drop-shadow-lg">SC</span>
-                     </div>
-                     <div className="flex flex-col">
-                         <div className="flex items-center gap-3 mb-0.5">
-                            <p className="text-[7px] font-black text-teal-400 uppercase tracking-[0.6em] animate-pulse">SIMULATION CRICKET</p>
-                            <span className="text-[7px] text-white/20 font-mono">MANAGER_CORE_V0.0.1</span>
-                         </div>
-                         <h2 className="text-xl font-black italic uppercase tracking-tighter text-white leading-none">
-                            {match.teamA} <span className="text-white/20 not-italic mx-1 text-[10px]">V</span> {match.teamB}
-                         </h2>
-                     </div>
-                 </div>
+            <div className="bg-[#050808] h-20 flex items-center justify-between px-6 z-20 border-b border-white/5 flex-shrink-0 relative">
+                <div className="flex items-center gap-6">
+                    {/* Brand & Version */}
+                    <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-teal-500 rounded-lg flex items-center justify-center shadow-[0_0_20px_rgba(20,184,166,0.3)]">
+                            <span className="text-black font-black text-xl italic">SC</span>
+                        </div>
+                        <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
+                                <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.3em]">Simulation Cricket</span>
+                                <span className="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-[6px] font-mono text-white/20">MANAGER_CORE_V0.0.1</span>
+                                <Icons.Help className="w-3 h-3 text-white/20 hover:text-white/40 cursor-pointer transition-colors" />
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                                <Icons.Wallet className="w-3 h-3 text-amber-500" />
+                                <span className="text-xs font-black text-white">$88.25Cr</span>
+                            </div>
+                        </div>
+                    </div>
 
-                 <div className="flex items-center gap-8 relative z-10">
-                     <div className="bg-white/5 px-5 py-1 rounded-xl border border-white/10 flex flex-col items-center shadow-inner">
+                    {/* Match Stream Info */}
+                    <div className="h-10 w-[1px] bg-white/5 mx-2" />
+                    
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 border border-red-500/20 rounded-full animate-pulse">
+                            <div className="w-2 h-2 rounded-full bg-red-500" />
+                            <span className="text-[8px] font-black text-red-500 uppercase tracking-widest">LIVE_STREAM</span>
+                        </div>
+                        <h2 className="text-xl font-black italic uppercase tracking-tighter text-white">
+                            {match.teamA} <span className="text-white/20 not-italic mx-2 text-xs">v</span> {match.teamB}
+                        </h2>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-8">
+                    {/* Win Probability Bar */}
+                    <div className="hidden lg:flex flex-col items-center w-48 gap-1.5 mr-4">
+                        <div className="flex justify-between w-full text-[7px] font-black uppercase tracking-widest">
+                            <span className="text-teal-400">{match.teamA} {Math.round(predictions?.winProb || 50)}%</span>
+                            <span className="text-white/30">{match.teamB} {100 - Math.round(predictions?.winProb || 50)}%</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden flex border border-white/5">
+                            <div style={{ width: `${predictions?.winProb || 50}%` }} className="h-full bg-teal-500 shadow-[0_0_10px_#14b8a6]" />
+                            <div style={{ width: `${100 - (predictions?.winProb || 50)}%` }} className="h-full bg-white/20" />
+                        </div>
+                    </div>
+
+                    {/* Overs Display */}
+                    <div className="bg-neutral-900 px-6 py-2 rounded-xl border border-white/10 flex flex-col items-center shadow-lg">
                         <p className="text-[7px] font-black text-white/30 uppercase tracking-[0.4em] mb-0.5">OVERS</p>
-                        <p className="text-2xl font-black text-teal-500 tracking-tighter leading-none">{currentInning.overs}</p>
-                     </div>
-                     <button 
+                        <p className="text-2xl font-black text-teal-400 tracking-tighter leading-none">{currentInning.overs}</p>
+                    </div>
+
+                    <button 
                         onClick={handleExit} 
-                        className="bg-zinc-900/80 hover:bg-zinc-800 text-[8px] font-black text-white tracking-[0.2em] px-6 py-3 rounded-xl border border-white/10 transition-all active:scale-95 shadow-2xl flex items-center gap-2 group"
-                     >
+                        className="bg-neutral-800 hover:bg-neutral-700 text-[10px] font-black text-white tracking-widest px-8 py-3 rounded-xl border border-white/10 shadow-2xl transition-all active:scale-95 flex items-center gap-3 uppercase italic"
+                    >
                         {state.status === 'completed' ? 'EXIT_MATCH' : 'SAVE_EXIT'}
-                        <Icons.X className="w-3 h-3 group-hover:rotate-90 transition-transform" />
-                     </button>
-                 </div>
-                 
-                 <div className="absolute bottom-0 left-0 w-full h-[2px] flex">
-                    <motion.div 
-                        initial={{ width: 0 }}
-                        animate={{ width: `${battingTeam.id === gameData.userTeamId ? (predictions?.winProb || 50) : 100 - (predictions?.winProb||50)}%` }}
-                        className="h-full bg-teal-500 shadow-[0_0_20px_#14b8a6]" 
-                    />
-                    <div className="h-full bg-white/5 flex-1" />
-                 </div>
+                        <Icons.X className="w-4 h-4 text-white/40" />
+                    </button>
+                </div>
             </div>
 
             <ModernMatchUI 
@@ -1537,20 +1558,7 @@ const LiveMatchScreen: React.FC<LiveMatchScreenProps> = ({ match, gameData, onMa
                 onShowMatchCentre={() => setShowMatchCentre(true)}
             />
 
-
-                    
-
-
-
-
-
-
-
-
-
-
-
-            <div className="bg-black/90 border-t border-white/5 p-3 flex justify-around items-center h-16">
+            <div className="bg-black/90 border-t border-white/5 p-3 flex justify-around items-center h-16 shrink-0 z-30">
                 {[
                     { icon: Icons.Home, label: 'HOME' },
                     { icon: Icons.Activity, label: 'STATS' },
