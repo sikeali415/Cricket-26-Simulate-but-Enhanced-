@@ -1,0 +1,8 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="128" fill="#050808"/>
+  <circle cx="256" cy="256" r="200" stroke="#14b8a6" stroke-width="20"/>
+  <path d="M156 256C156 200.772 200.772 156 256 156C311.228 156 356 200.772 356 256C356 311.228 311.228 356 256 356C200.772 356 156 311.228 156 256Z" stroke="#14b8a6" stroke-width="10" stroke-dasharray="20 20"/>
+  <text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="system-ui, sans-serif" font-weight="900" font-size="80" font-style="italic">SIMULATION</text>
+  <text x="50%" y="65%" dominant-baseline="middle" text-anchor="middle" fill="#14b8a6" font-family="system-ui, sans-serif" font-weight="900" font-size="120" font-style="italic">CRICKET</text>
+  <path d="M256 100V140M256 372V412M100 256H140M372 256H412" stroke="#14b8a6" stroke-width="10" stroke-linecap="round"/>
+</svg>

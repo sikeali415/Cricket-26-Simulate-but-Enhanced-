@@ -1,31 +1,65 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-display: "Outfit", sans-serif;
+}
 
 @layer base {
+  :root {
+    --bg: #050808;
+    --ink: #ffffff;
+    --accent: #14b8a6;
+    --line: rgba(255, 255, 255, 0.1);
+  }
+
   body {
-    @apply bg-charcoal-950 text-white font-sans;
+    @apply bg-[#050808] text-white antialiased selection:bg-teal-500 selection:text-black font-sans;
+    font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
 }
 
 @layer components {
-  .btn-primary {
-    @apply bg-brand-teal text-white px-6 py-3 rounded-xl font-bold transition-all hover:bg-teal-500 active:scale-95 shadow-[0_0_20px_rgba(20,184,166,0.3)];
-  }
-  
   .glass-card {
-    @apply bg-white/5 border border-white/10 backdrop-blur-md rounded-2xl p-4 shadow-xl;
+    @apply bg-white/[0.03] backdrop-blur-2xl border border-white/10 rounded-[32px] shadow-2xl;
   }
-  
-  .glow-teal {
-    @apply shadow-[0_0_15px_rgba(20,184,166,0.4)];
+
+  .glass-button {
+    @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl transition-all duration-300 hover:bg-white/10 active:scale-95;
+  }
+
+  .neon-glow {
+    @apply shadow-[0_0_20px_rgba(20,184,166,0.3)];
+  }
+
+  .text-glow {
+    @apply drop-shadow-[0_0_10px_rgba(255,255,255,0.3)];
   }
 }
 
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
 }
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-teal-500/20 hover:bg-teal-500/40 transition-colors rounded-full;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
 }
