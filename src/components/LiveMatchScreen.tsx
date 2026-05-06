@@ -40,8 +40,10 @@ const BatsmanCard = ({ player, isActive, stats }: { player: Player, isActive: bo
   </div>
 );
 
-export const LiveMatchScreen = () => {
-  const { state, striker, nonStriker, bowler, playBall, setAggression, getPlayerStats } = useSimulation();
+import { Team } from '../types';
+
+export const LiveMatchScreen = ({ teamA, teamB, onExit }: { teamA: Team, teamB: Team, onExit: (result?: any) => void }) => {
+  const { state, striker, nonStriker, bowler, playBall, setAggression, getPlayerStats, finishMatch } = useSimulation(teamA, teamB, onExit);
 
   const strikerStats = getPlayerStats(striker.id);
   const nonStrikerStats = getPlayerStats(nonStriker.id);
@@ -59,24 +61,25 @@ export const LiveMatchScreen = () => {
           </div>
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
-              <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.3em]">SC Simulation Cricket</span>
-              <span className="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-[6px] font-mono text-white/20">V0.0.1</span>
-            </div>
-            <div className="flex items-center gap-2 mt-0.5">
-              <Icons.Wallet className="w-3 h-3 text-amber-500" />
-              <span className="text-xs font-black text-white">$88.25Cr</span>
+              <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.3em]">Simulation Cricket</span>
+              <span className="px-1.5 py-0.5 bg-white/5 border border-white/10 rounded text-[6px] font-mono text-white/20">v.0.0.1.1 EA</span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 relative z-10">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 border border-red-500/20 rounded-full">
-            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            <span className="text-[8px] font-black text-red-500 uppercase tracking-widest">LIVE_STATUS</span>
+        <div className="flex flex-col items-center gap-1 relative z-10">
+          <div className="flex items-center gap-3">
+             <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/20 rounded-full">
+               <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+               <span className="text-[7px] font-black text-red-500 uppercase tracking-widest">LIVE</span>
+             </div>
+             <h2 className="text-xl font-black italic uppercase tracking-tighter text-white">
+               {state.battingTeam.name} <span className="text-white/20 not-italic mx-2 text-xs">v</span> {state.bowlingTeam.name}
+             </h2>
           </div>
-          <h2 className="text-xl font-black italic uppercase tracking-tighter text-white">
-            {state.battingTeam.name} <span className="text-white/20 not-italic mx-2 text-xs">v</span> {state.bowlingTeam.name}
-          </h2>
+          {state.target && (
+            <span className="text-[10px] font-black text-brand-teal uppercase tracking-[0.2em]">Target: {state.target + 1} ({state.target - state.score + 1} needed off {(120 - (parseFloat(state.overs)*6)).toFixed(0)} balls)</span>
+          )}
         </div>
 
         <div className="flex items-center gap-4 relative z-10">
@@ -84,8 +87,11 @@ export const LiveMatchScreen = () => {
             <p className="text-[7px] font-black text-white/30 uppercase tracking-[0.4em] mb-0.5">OVERS</p>
             <p className="text-2xl font-black text-brand-teal tracking-tighter leading-none">{state.overs}</p>
           </div>
-          <button className="bg-white/5 hover:bg-white/10 text-[10px] font-black text-white/60 tracking-widest px-6 py-3 rounded-xl border border-white/10 transition-all uppercase italic">
-            SAVE_EXIT
+          <button 
+            onClick={finishMatch}
+            className="bg-white/5 hover:bg-white/10 text-[10px] font-black text-white/60 tracking-widest px-6 py-3 rounded-xl border border-white/10 transition-all uppercase italic"
+          >
+            {state.status === 'completed' ? 'FINISH' : 'FORFEIT'}
           </button>
         </div>
       </header>
@@ -120,53 +126,84 @@ export const LiveMatchScreen = () => {
 
         {/* Center Column: Gameplay & Visuals */}
         <div className="col-span-6 flex flex-col gap-6">
-          <div className="bg-charcoal-900 border border-white/10 rounded-3xl p-8 flex flex-col items-center relative overflow-hidden flex-1 shadow-2xl">
-            <div className="absolute top-0 right-0 p-8 opacity-5 rotate-12">
+          <div className="bg-charcoal-900 border border-white/10 rounded-[2.5rem] p-10 flex flex-col items-center relative overflow-hidden flex-1 shadow-[0_40px_100px_rgba(0,0,0,0.5)]">
+            {/* Background Accents */}
+            <div className="absolute top-0 right-0 p-12 opacity-5 rotate-12 scale-150">
                <Icons.Activity className="w-64 h-64" />
             </div>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] aspect-square bg-[radial-gradient(circle,rgba(20,184,166,0.05)_0%,transparent_70%)] pointer-events-none" />
             
-            <div className="text-center relative z-10 mb-8">
-              <span className="text-[10px] font-black text-brand-teal uppercase tracking-[0.5em] mb-2 block">CURRENT_SCORE</span>
-              <h1 className="text-9xl font-black italic tracking-tighter text-white drop-shadow-[0_0_40px_rgba(255,255,255,0.1)]">
-                {state.score}<span className="text-brand-teal">/</span>{state.wickets}
-              </h1>
+            <div className="text-center relative z-10 mb-10 w-full">
+              <span className="text-[10px] font-black text-brand-teal uppercase tracking-[0.6em] mb-4 block animate-pulse">CURRENT_SESSION_MATCH</span>
+              <div className="flex items-center justify-center gap-8">
+                 <div className="flex flex-col items-end">
+                    <span className="text-6xl font-black italic text-white leading-none">{state.score}</span>
+                    <span className="text-sm font-black text-white/20 uppercase tracking-widest mt-1">RUNS_TOTAL</span>
+                 </div>
+                 <div className="text-7xl font-black text-brand-teal/20 italic select-none">/</div>
+                 <div className="flex flex-col items-start">
+                    <span className="text-6xl font-black italic text-white leading-none">{state.wickets}</span>
+                    <span className="text-sm font-black text-white/20 uppercase tracking-widest mt-1">WICKETS_LOST</span>
+                 </div>
+              </div>
             </div>
 
-            <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-4" />
+            <div className="w-full flex items-center gap-4 mb-6">
+               <div className="flex-1 h-px bg-gradient-to-r from-transparent to-white/10" />
+               <div className="px-4 py-1.5 bg-white/5 border border-white/10 rounded-full">
+                  <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.4em]">LIVE_FEED</span>
+               </div>
+               <div className="flex-1 h-px bg-gradient-to-l from-transparent to-white/10" />
+            </div>
 
-            <div className="flex-1 w-full overflow-y-auto scrollbar-hide py-4 space-y-3">
+            <div className="flex-1 w-full overflow-y-auto scrollbar-hide py-2 space-y-3 relative z-10">
                <AnimatePresence initial={false}>
                  {state.commentary.map((text, i) => (
                    <motion.div
                      key={i}
-                     initial={{ opacity: 0, x: -20 }}
-                     animate={{ opacity: 1, x: 0 }}
-                     className={`p-3 rounded-xl border ${i === 0 ? 'bg-white/5 border-white/10 text-white' : 'opacity-30 border-transparent text-white/60'}`}
+                     initial={{ opacity: 0, x: -10, filter: 'blur(5px)' }}
+                     animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                     className={`p-4 rounded-2xl border transition-all ${
+                       i === 0 
+                         ? 'bg-brand-teal/5 border-brand-teal/30 text-white shadow-[0_0_20px_rgba(20,184,166,0.1)]' 
+                         : 'bg-white/[0.02] border-transparent text-white/40 opacity-40'
+                     }`}
                    >
-                     <p className={`text-sm font-black italic tracking-tight uppercase ${i === 0 ? 'text-brand-teal' : ''}`}>
-                       {text}
-                     </p>
+                     <div className="flex items-start gap-4">
+                        <div className={`mt-1.5 w-1.5 h-1.5 rounded-full ${i === 0 ? 'bg-brand-teal shadow-[0_0_10px_#14b8a6]' : 'bg-white/10'}`} />
+                        <p className={`text-base font-black italic tracking-tight uppercase leading-relaxed ${i === 0 ? 'text-brand-teal' : ''}`}>
+                          {text}
+                        </p>
+                     </div>
                    </motion.div>
                  ))}
                </AnimatePresence>
+               {/* Vignette fade */}
+               <div className="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-charcoal-900 to-transparent pointer-events-none" />
             </div>
 
-            <div className="w-full grid grid-cols-2 gap-6 mt-8 relative z-10">
-               <div className="bg-charcoal-950 border border-white/5 rounded-2xl p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[8px] font-black text-white/30 uppercase tracking-widest">STRATEGY_LVL</span>
-                    <span className="text-xs font-black text-brand-teal">{state.aggression}/5</span>
+            <div className="w-full grid grid-cols-12 gap-6 mt-10 relative z-10 items-stretch">
+               <div className="col-span-5 bg-charcoal-950 border border-white/5 rounded-3xl p-6 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-[9px] font-black text-white/30 uppercase tracking-widest leading-none">AGGRESSION_CONTROL</span>
+                      <Icons.Activity className="w-3 h-3 text-brand-teal" />
+                    </div>
+                    <div className="flex gap-2 mb-4">
+                      {[1,2,3,4,5].map(v => (
+                        <button 
+                          key={v}
+                          onClick={() => setAggression(v)}
+                          className={`flex-1 h-3 rounded-xl transition-all duration-300 border ${
+                            state.aggression >= v 
+                              ? 'bg-brand-teal border-brand-teal shadow-[0_0_15px_rgba(20,184,166,0.4)]' 
+                              : 'bg-white/5 border-white/5 hover:bg-white/10'
+                          }`}
+                        />
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex gap-1.5">
-                    {[1,2,3,4,5].map(v => (
-                      <button 
-                        key={v}
-                        onClick={() => setAggression(v)}
-                        className={`flex-1 h-2 rounded-full transition-all ${state.aggression >= v ? 'bg-brand-teal shadow-[0_0_10px_rgba(20,184,166,0.4)]' : 'bg-white/5'}`}
-                      />
-                    ))}
-                  </div>
-                  <div className="flex justify-between mt-2 text-[6px] font-black text-white/20 uppercase tracking-widest">
+                  <div className="flex justify-between text-[7px] font-black text-white/20 uppercase tracking-[0.2em]">
                     <span>DEFENSIVE</span>
                     <span>BALANCED</span>
                     <span>AGGRESSIVE</span>
@@ -176,11 +213,14 @@ export const LiveMatchScreen = () => {
                <motion.button
                  whileTap={{ scale: 0.95 }}
                  onClick={playBall}
-                 className="bg-brand-teal text-black rounded-2xl flex items-center justify-center gap-4 border border-black shadow-[0_10px_40px_rgba(20,184,166,0.3)] group overflow-hidden relative"
+                 className="col-span-7 bg-brand-teal text-black rounded-3xl flex items-center justify-center gap-6 border border-black shadow-[0_15px_50px_rgba(20,184,166,0.3)] group overflow-hidden relative"
                >
-                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-                 <Icons.Zap className="w-8 h-8 relative z-10 animate-pulse" />
-                 <span className="text-3xl font-black italic uppercase tracking-tighter relative z-10">PLAY BALL</span>
+                 <div className="absolute inset-0 bg-white/30 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
+                 <Icons.Zap className="w-10 h-10 relative z-10 animate-bounce" />
+                 <div className="flex flex-col items-start relative z-10">
+                    <span className="text-4xl font-black italic uppercase tracking-tighter leading-none">PLAY BALL</span>
+                    <span className="text-[8px] font-black uppercase tracking-[0.4em] opacity-60">NEXT_DELIVERY_READY</span>
+                 </div>
                </motion.button>
             </div>
           </div>

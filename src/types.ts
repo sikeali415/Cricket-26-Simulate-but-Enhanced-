@@ -29,6 +29,39 @@ export interface Team {
   secondaryColor: string;
 }
 
+export interface TeamStats {
+  played: number;
+  won: number;
+  lost: number;
+  pts: number;
+  nrr: number;
+}
+
+export type TournamentPhase = 'qualifiers' | 'league' | 'playoffs' | 'semis' | 'final';
+
+export interface Fixture {
+  id: string;
+  teamAId: string;
+  teamBId: string;
+  phase: TournamentPhase;
+  status: 'pending' | 'completed';
+  winnerId?: string;
+  scoreA?: number;
+  scoreB?: number;
+  wicketsA?: number;
+  wicketsB?: number;
+}
+
+export interface TournamentState {
+  version: string;
+  phase: TournamentPhase;
+  standings: Record<string, TeamStats>;
+  fixtures: Fixture[];
+  currentMatchId?: string;
+  qualifiedTeams: string[]; // Teams already in the main league
+  semifinalists: string[];
+}
+
 export interface MatchState {
   id: string;
   battingTeam: Team;
